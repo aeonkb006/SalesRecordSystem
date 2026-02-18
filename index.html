@@ -11,31 +11,39 @@
 
     <style>
         :root { --primary: #0056b3; --success: #218838; --danger: #d93025; --dark: #000000; }
-        body { font-family: -apple-system, sans-serif; padding: 15px; background: #f0f2f5; margin: 0; color: var(--dark); overflow-x: hidden; user-select: none; }
+        * { box-sizing: border-box; } /* 關鍵：防止框框被撐開 */
         
-        /* 標題 */
+        body { font-family: -apple-system, sans-serif; padding: 10px; background: #f0f2f5; margin: 0; color: var(--dark); overflow-x: hidden; user-select: none; }
+        
         .header-area { margin-bottom: 15px; padding-right: 50px; position: relative; }
-        h2 { margin: 0; font-size: 26px; font-weight: 900; }
-        .disclaimer { font-size: 12px; color: #555; font-weight: bold; }
+        h2 { margin: 0; font-size: 24px; font-weight: 900; }
+        .disclaimer { font-size: 12px; color: #d93025; font-weight: bold; }
         .admin-trigger { position: absolute; top: 0; right: 0; font-size: 32px; padding: 5px; cursor: pointer; }
 
-        .card { background: white; padding: 15px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .card { background: white; padding: 15px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; width: 100%; }
         
         label { display: block; font-weight: 800; margin-bottom: 5px; font-size: 18px; }
+        
+        /* 彈性輸入框設計 */
+        .input-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+        .input-group { flex: 1; min-width: 140px; } /* 寬度不足時會自動換行 */
+
         .display-box { 
+            width: 100%; min-height: 55px; border: 2px solid #888; border-radius: 10px; 
+            font-size: 22px; font-weight: bold; display: flex; align-items: center; 
+            padding: 8px 12px; background: #fff; margin-bottom: 10px;
+            word-break: break-all;
+        }
+        .display-box.active { border-color: var(--primary); background: #eef6ff; }
+
+        select, input[type="text"], input[type="date"] { 
             width: 100%; height: 55px; border: 2px solid #888; border-radius: 10px; 
-            font-size: 24px; font-weight: bold; display: flex; align-items: center; 
-            padding: 0 10px; box-sizing: border-box; background: #fff; margin-bottom: 15px;
+            font-size: 20px; font-weight: bold; margin-bottom: 10px; padding: 5px 10px;
+            background: #fff; -webkit-appearance: none;
         }
-        .display-box.active { border-color: var(--primary); background: #eef6ff; box-shadow: 0 0 8px rgba(0,86,179,0.3); }
 
-        select { width: 100%; height: 55px; border: 2px solid #888; border-radius: 10px; font-size: 20px; font-weight: bold; margin-bottom: 15px; }
-
-        /* 自定義數字鍵盤 */
-        .keypad { 
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; 
-            background: #d1d5db; padding: 10px; border-radius: 15px; margin-top: 5px;
-        }
+        /* 數字鍵盤優化 */
+        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #d1d5db; padding: 10px; border-radius: 15px; }
         .key { 
             background: #fff; height: 60px; display: flex; align-items: center; justify-content: center;
             font-size: 24px; font-weight: 900; border-radius: 10px; box-shadow: 0 3px 0 #9ca3af;
@@ -44,47 +52,48 @@
         .key.action { background: #6b7280; color: white; }
 
         button.btn-save { 
-            width: 100%; height: 70px; background: var(--success); color: white; border: none;
-            border-radius: 15px; font-size: 26px; font-weight: 900; margin-top: 15px;
+            width: 100%; height: 65px; background: var(--success); color: white; border: none;
+            border-radius: 15px; font-size: 24px; font-weight: 900; margin-top: 15px;
         }
 
         /* 紀錄列表 */
-        .swipe-item { position: relative; overflow: hidden; background: #fff; border-bottom: 2px solid #eee; }
-        .swipe-content { display: flex; flex-direction: column; padding: 15px; background: white; position: relative; z-index: 2; transition: transform 0.3s; }
-        .swipe-action { position: absolute; right: 0; top: 0; bottom: 0; width: 90px; background: var(--danger); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; z-index: 1; font-size: 18px; }
-        .row-top { display: flex; justify-content: space-between; align-items: center; }
-        .info-main-text { font-size: 20px; font-weight: 900; }
-        .info-price-text { font-size: 22px; font-weight: 900; color: var(--danger); }
-        .info-receipt-text { font-size: 16px; color: #444; font-weight: 600; background: #e9ecef; padding: 2px 8px; border-radius: 5px; }
+        .swipe-item { position: relative; overflow: hidden; background: #fff; border-bottom: 2px solid #eee; width: 100%; }
+        .swipe-content { display: flex; flex-direction: column; padding: 12px; background: white; position: relative; z-index: 2; transition: transform 0.3s; }
+        .swipe-action { position: absolute; right: 0; top: 0; bottom: 0; width: 80px; background: var(--danger); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; z-index: 1; font-size: 18px; }
+        
+        .record-header { display: flex; justify-content: space-between; align-items: baseline; }
+        .info-main-text { font-size: 18px; font-weight: 900; }
+        .info-price-text { font-size: 20px; font-weight: 900; color: var(--danger); }
+        .info-receipt-text { font-size: 15px; color: #444; font-weight: 600; background: #e9ecef; padding: 2px 8px; border-radius: 5px; margin-top: 5px; display: inline-block; }
 
         .hidden { display: none !important; }
-        .admin-item { background: #f9f9f9; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #ddd; }
+        .total-row { display: flex; justify-content: space-between; align-items: center; padding: 0 5px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
 <div class="header-area">
     <h2>每日銷售記錄系統</h2>
-    <div class="disclaimer">⚠️ 實驗性質，數據遺失不負責</div>
+    <div class="disclaimer">⚠️ 數據遺失不負責</div>
     <div class="admin-trigger" onclick="vibrate(); toggleAdmin()">⚙️</div>
 </div>
 
 <div id="salesSection">
     <div class="card">
-        <label>📅 日期</label>
-        <input type="date" id="saleDate" style="height:50px; font-size:18px; width:100%;" onchange="refreshAll()">
+        <label>📅 銷售日期</label>
+        <input type="date" id="saleDate" onchange="refreshAll()">
 
-        <div style="display: flex; gap: 10px; margin-top:10px;">
-            <div style="flex: 1;"><label>類別</label><select id="saleCat" onchange="onCategoryChange()"></select></div>
-            <div style="flex: 1;"><label>型號</label><select id="saleModel"></select></div>
+        <div class="input-row">
+            <div class="input-group"><label>類別</label><select id="saleCat" onchange="onCategoryChange()"></select></div>
+            <div class="input-group"><label>型號</label><select id="saleModel"></select></div>
         </div>
 
-        <div style="display: flex; gap: 10px;">
-            <div style="flex: 1;" onclick="setActiveInput('qty')">
+        <div class="input-row">
+            <div class="input-group" onclick="setActiveInput('qty')">
                 <label>數量</label>
                 <div id="displayQty" class="display-box">1</div>
             </div>
-            <div style="flex: 1;" onclick="setActiveInput('receipt')">
+            <div class="input-group" onclick="setActiveInput('receipt')">
                 <label>收據編號</label>
                 <div id="displayReceipt" class="display-box"></div>
             </div>
@@ -99,47 +108,46 @@
             <div class="key" onclick="pressKey('1')">1</div><div class="key" onclick="pressKey('2')">2</div><div class="key" onclick="pressKey('3')">3</div>
             <div class="key" onclick="pressKey('4')">4</div><div class="key" onclick="pressKey('5')">5</div><div class="key" onclick="pressKey('6')">6</div>
             <div class="key" onclick="pressKey('7')">7</div><div class="key" onclick="pressKey('8')">8</div><div class="key" onclick="pressKey('9')">9</div>
-            <div class="key action" onclick="pressKey('.')">.</div><div class="key" onclick="pressKey('0')">0</div><div class="key action" onclick="pressKey('DEL')">刪除</div>
+            <div class="key action" onclick="pressKey('.')">.</div><div class="key" onclick="pressKey('0')">0</div><div class="key action" onclick="pressKey('DEL')">刪</div>
         </div>
 
         <button class="btn-save" onclick="vibrate(); saveRecord()">確認儲存</button>
     </div>
 
-    <div class="row-top" style="padding: 0 10px;">
-        <h3 id="tableTitle" style="font-size: 22px;">紀錄</h3>
-        <div id="dayTotal" style="font-size:22px; font-weight:900; color:var(--primary);">總計: $0</div>
+    <div class="total-row">
+        <h3 id="tableTitle" style="font-size: 20px; margin: 0;">紀錄</h3>
+        <div id="dayTotal" style="font-size:20px; font-weight:900; color:var(--primary);">總計: $0</div>
     </div>
     <div id="recordList" class="record-list"></div>
 </div>
 
 <div id="adminSection" class="hidden">
     <div class="card">
-        <h2 style="font-size: 24px;">⚙️ 管理後台</h2>
-        <div style="border: 1px solid #ccc; padding: 10px; border-radius: 12px; margin-bottom: 15px;">
+        <h2 style="font-size: 22px; margin-top: 0;">⚙️ 管理後台</h2>
+        <div style="border: 1px solid #ccc; padding: 12px; border-radius: 12px; margin-bottom: 15px;">
             <label>新增分類</label>
-            <input type="text" id="newCatName" style="height:45px; font-size:18px; width:100%;">
-            <button class="btn-save" onclick="vibrate(); addCategory()" style="height: 50px; font-size: 18px;">新增分類</button>
+            <input type="text" id="newCatName">
+            <button class="btn-save" onclick="vibrate(); addCategory()" style="height: 50px; font-size: 18px; margin-top: 5px;">新增分類</button>
         </div>
-        <div style="border: 1px solid #ccc; padding: 10px; border-radius: 12px; margin-bottom: 15px;">
+        <div style="border: 1px solid #ccc; padding: 12px; border-radius: 12px; margin-bottom: 15px;">
             <label>新增型號</label>
             <select id="targetCat"></select>
-            <input type="text" id="newModelName" style="height:45px; font-size:18px; width:100%;">
-            <button class="btn-save" onclick="vibrate(); addModel()" style="height: 50px; font-size: 18px;">新增型號</button>
+            <input type="text" id="newModelName">
+            <button class="btn-save" onclick="vibrate(); addModel()" style="height: 50px; font-size: 18px; margin-top: 5px;">新增型號</button>
         </div>
         <div id="adminConfigList"></div>
-        <button onclick="vibrate(); toggleAdmin()" style="height: 60px; width:100%; border-radius: 12px; font-size: 20px; background:#666; color:white; border:none; font-weight:bold; margin-top:15px;">返回</button>
+        <button onclick="vibrate(); toggleAdmin()" style="height: 60px; width:100%; border-radius: 12px; font-size: 20px; background:#666; color:white; border:none; font-weight:bold; margin-top:10px;">返回錄入</button>
     </div>
 </div>
 
 <script>
     let products = JSON.parse(localStorage.getItem('exp_products')) || { "手機": ["iPhone 15"] };
     let sales = JSON.parse(localStorage.getItem('exp_sales')) || [];
-    let activeInput = 'receipt'; // 預設聚焦收據
+    let activeInput = 'receipt';
     let inputValues = { qty: '1', receipt: '', price: '0' };
 
     document.getElementById('saleDate').valueAsDate = new Date();
 
-    // 觸感回饋
     function vibrate() { if (navigator.vibrate) navigator.vibrate(40); }
 
     function setActiveInput(type) {
@@ -169,10 +177,8 @@
     }
 
     function onCategoryChange() {
-        vibrate();
         const cat = document.getElementById('saleCat').value;
         const models = products[cat] || [];
-        // 強制空白選項
         let html = '<option value="">--請選擇型號--</option>';
         html += models.map(m => `<option value="${m}">${m}</option>`).join('');
         document.getElementById('saleModel').innerHTML = html;
@@ -192,11 +198,11 @@
 
     function saveRecord() {
         const model = document.getElementById('saleModel').value;
-        if (!model) return alert("❌ 請選擇型號！");
-        if (!inputValues.receipt) return alert("❌ 請輸入收據編號！");
-        if (parseFloat(inputValues.price) <= 0) return alert("❌ 請輸入金額！");
+        if (!model) return alert("❌ 請選擇型號");
+        if (!inputValues.receipt) return alert("❌ 請輸入收據編號");
+        if (parseFloat(inputValues.price) <= 0) return alert("❌ 金額不能為0");
 
-        const record = {
+        sales.unshift({
             id: Date.now(),
             date: document.getElementById('saleDate').value,
             cat: document.getElementById('saleCat').value,
@@ -204,13 +210,11 @@
             qty: parseInt(inputValues.qty),
             receipt: inputValues.receipt,
             price: parseFloat(inputValues.price)
-        };
-
-        sales.unshift(record);
+        });
         inputValues.receipt = '';
         inputValues.price = '0';
         refreshAll();
-        alert("✅ 儲存成功！");
+        alert("✅ 儲存成功");
     }
 
     function toggleAdmin() {
@@ -232,7 +236,7 @@
     function renderAdminConfigList() {
         let html = '';
         for (let cat in products) {
-            html += `<div class="admin-item"><strong>${cat}</strong><br><small>${products[cat].join(', ')}</small></div>`;
+            html += `<div class="admin-item"><strong>${cat}</strong>: <small>${products[cat].join(', ')}</small></div>`;
         }
         document.getElementById('adminConfigList').innerHTML = html;
     }
@@ -245,9 +249,9 @@
             total += s.price;
             return `
             <div class="swipe-item">
-                <div class="swipe-action" onclick="vibrate(); deleteRecord(${s.id})">刪除</div>
+                <div class="swipe-action" onclick="deleteRecord(${s.id})">刪除</div>
                 <div class="swipe-content" ontouchstart="handleTS(event)" ontouchmove="handleTM(event)" ontouchend="handleTE(event)">
-                    <div class="row-top"><div class="info-main-text">${s.model} : ${s.qty}件</div><div class="info-price-text">$${s.price}</div></div>
+                    <div class="record-header"><div class="info-main-text">${s.model} : ${s.qty}件</div><div class="info-price-text">$${s.price}</div></div>
                     <div><span class="info-receipt-text">收據: ${s.receipt}</span></div>
                 </div>
             </div>`;
@@ -255,14 +259,12 @@
         document.getElementById('dayTotal').innerText = `總計: $${total}`;
     }
 
-    function deleteRecord(id) {
-        if(confirm("確定刪除？")) { sales = sales.filter(s => s.id !== id); refreshAll(); }
-    }
+    function deleteRecord(id) { if(confirm("確定刪除？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
 
     let startX = 0; let currentItem = null;
     function handleTS(e) { startX = e.touches[0].clientX; currentItem = e.currentTarget; currentItem.style.transition = 'none'; }
-    function handleTM(e) { let diff = startX - e.touches[0].clientX; if (diff > 0 && diff < 110) currentItem.style.transform = `translateX(-${diff}px)`; }
-    function handleTE(e) { currentItem.style.transition = 'transform 0.3s ease'; if (startX - e.changedTouches[0].clientX > 50) currentItem.style.transform = `translateX(-90px)`; else currentItem.style.transform = `translateX(0px)`; }
+    function handleTM(e) { let diff = startX - e.touches[0].clientX; if (diff > 0 && diff < 100) currentItem.style.transform = `translateX(-${diff}px)`; }
+    function handleTE(e) { currentItem.style.transition = 'transform 0.3s ease'; if (startX - e.changedTouches[0].clientX > 50) currentItem.style.transform = `translateX(-80px)`; else currentItem.style.transform = `translateX(0px)`; }
 
     refreshAll();
     updateDisplays();
