@@ -11,96 +11,79 @@
 
     <style>
         :root { --primary: #0056b3; --success: #218838; --danger: #d93025; --dark: #000000; }
-        * { box-sizing: border-box; } /* 關鍵：防止框框被撐開 */
-        
-        body { font-family: -apple-system, sans-serif; padding: 10px; background: #f0f2f5; margin: 0; color: var(--dark); overflow-x: hidden; user-select: none; }
+        body { font-family: -apple-system, sans-serif; padding: 15px; background: #f0f2f5; margin: 0; color: var(--dark); user-select: none; }
         
         .header-area { margin-bottom: 15px; padding-right: 50px; position: relative; }
-        h2 { margin: 0; font-size: 24px; font-weight: 900; }
-        .disclaimer { font-size: 12px; color: #d93025; font-weight: bold; }
-        .admin-trigger { position: absolute; top: 0; right: 0; font-size: 32px; padding: 5px; cursor: pointer; }
+        h2 { margin: 0; font-size: 26px; font-weight: 900; }
+        .disclaimer { font-size: 11px; color: #d93025; font-weight: bold; }
+        .admin-trigger { position: absolute; top: 0; right: 0; font-size: 35px; padding: 5px; cursor: pointer; }
 
-        .card { background: white; padding: 15px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; width: 100%; }
-        
+        .card { background: white; padding: 15px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
         label { display: block; font-weight: 800; margin-bottom: 5px; font-size: 18px; }
         
-        /* 彈性輸入框設計 */
-        .input-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
-        .input-group { flex: 1; min-width: 140px; } /* 寬度不足時會自動換行 */
-
+        /* 顯示框 */
         .display-box { 
-            width: 100%; min-height: 55px; border: 2px solid #888; border-radius: 10px; 
-            font-size: 22px; font-weight: bold; display: flex; align-items: center; 
-            padding: 8px 12px; background: #fff; margin-bottom: 10px;
-            word-break: break-all;
-        }
-        .display-box.active { border-color: var(--primary); background: #eef6ff; }
-
-        select, input[type="text"], input[type="date"] { 
             width: 100%; height: 55px; border: 2px solid #888; border-radius: 10px; 
-            font-size: 20px; font-weight: bold; margin-bottom: 10px; padding: 5px 10px;
-            background: #fff; -webkit-appearance: none;
+            font-size: 24px; font-weight: bold; display: flex; align-items: center; 
+            padding: 0 10px; box-sizing: border-box; background: #fff; margin-bottom: 15px;
         }
+        .display-box.active { border-color: var(--primary); background: #eef6ff; box-shadow: 0 0 8px rgba(0,86,179,0.3); }
 
-        /* 數字鍵盤優化 */
-        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #d1d5db; padding: 10px; border-radius: 15px; }
-        .key { 
-            background: #fff; height: 60px; display: flex; align-items: center; justify-content: center;
-            font-size: 24px; font-weight: 900; border-radius: 10px; box-shadow: 0 3px 0 #9ca3af;
-        }
-        .key:active { transform: translateY(2px); box-shadow: none; background: #e5e7eb; }
+        select, input[type="text"] { width: 100%; height: 50px; border: 2px solid #888; border-radius: 10px; font-size: 20px; font-weight: bold; margin-bottom: 10px; }
+
+        /* 數字鍵盤 */
+        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #d1d5db; padding: 10px; border-radius: 15px; }
+        .key { background: #fff; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; border-radius: 10px; box-shadow: 0 3px 0 #9ca3af; }
+        .key:active { background: #e5e7eb; transform: translateY(2px); box-shadow: none; }
         .key.action { background: #6b7280; color: white; }
 
-        button.btn-save { 
-            width: 100%; height: 65px; background: var(--success); color: white; border: none;
-            border-radius: 15px; font-size: 24px; font-weight: 900; margin-top: 15px;
-        }
+        button.btn-save { width: 100%; height: 70px; background: var(--success); color: white; border: none; border-radius: 15px; font-size: 26px; font-weight: 900; margin-top: 15px; }
 
-        /* 紀錄列表 */
-        .swipe-item { position: relative; overflow: hidden; background: #fff; border-bottom: 2px solid #eee; width: 100%; }
-        .swipe-content { display: flex; flex-direction: column; padding: 12px; background: white; position: relative; z-index: 2; transition: transform 0.3s; }
-        .swipe-action { position: absolute; right: 0; top: 0; bottom: 0; width: 80px; background: var(--danger); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; z-index: 1; font-size: 18px; }
-        
-        .record-header { display: flex; justify-content: space-between; align-items: baseline; }
-        .info-main-text { font-size: 18px; font-weight: 900; }
-        .info-price-text { font-size: 20px; font-weight: 900; color: var(--danger); }
-        .info-receipt-text { font-size: 15px; color: #444; font-weight: 600; background: #e9ecef; padding: 2px 8px; border-radius: 5px; margin-top: 5px; display: inline-block; }
+        /* 橫拉紀錄 */
+        .swipe-item { position: relative; overflow: hidden; background: #fff; border-bottom: 2px solid #eee; }
+        .swipe-content { display: flex; flex-direction: column; padding: 15px; background: white; position: relative; z-index: 2; transition: transform 0.3s; }
+        .swipe-action { position: absolute; right: 0; top: 0; bottom: 0; width: 90px; background: var(--danger); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; z-index: 1; font-size: 18px; }
+
+        /* 後台項目 */
+        .admin-box-item { background: #fff; border: 1px solid #ccc; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+        .cat-title-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; margin-bottom: 8px; }
+        .model-row-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .del-btn-text { color: var(--danger); font-weight: bold; font-size: 16px; padding: 5px 10px; border: 1px solid var(--danger); border-radius: 6px; }
 
         .hidden { display: none !important; }
-        .total-row { display: flex; justify-content: space-between; align-items: center; padding: 0 5px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
 <div class="header-area">
     <h2>每日銷售記錄系統</h2>
-    <div class="disclaimer">⚠️ 數據遺失不負責</div>
-    <div class="admin-trigger" onclick="vibrate(); toggleAdmin()">⚙️</div>
+    <div class="disclaimer">⚠️ 系統為實驗性質,如數據有所遺失,開發者一概並不負責</div>
+    <div class="admin-trigger" onclick="hb(); toggleAdmin()">⚙️</div>
 </div>
 
 <div id="salesSection">
     <div class="card">
-        <label>📅 銷售日期</label>
-        <input type="date" id="saleDate" onchange="refreshAll()">
+        <label>📅 選擇日期</label>
+        <input type="date" id="saleDate" style="height:45px; width:100%; font-size:18px;" onchange="refreshAll()">
 
-        <div class="input-row">
-            <div class="input-group"><label>類別</label><select id="saleCat" onchange="onCategoryChange()"></select></div>
-            <div class="input-group"><label>型號</label><select id="saleModel"></select></div>
+        <div style="display: flex; gap: 10px; margin-top:10px;">
+            <div style="flex: 1;"><label>類別</label><select id="saleCat" onchange="onCategoryChange()"></select></div>
+            <div style="flex: 1;"><label>型號</label><select id="saleModel" onchange="hb()"></select></div>
         </div>
 
-        <div class="input-row">
-            <div class="input-group" onclick="setActiveInput('qty')">
+        <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;" onclick="setActiveInput('qty')">
                 <label>數量</label>
                 <div id="displayQty" class="display-box">1</div>
             </div>
-            <div class="input-group" onclick="setActiveInput('receipt')">
+            <div style="flex: 1;" onclick="setActiveInput('receipt')">
                 <label>收據編號</label>
                 <div id="displayReceipt" class="display-box"></div>
             </div>
         </div>
 
         <div onclick="setActiveInput('price')">
-            <label>💰 金額 ($)</label>
+            <label>💰 銷售金額 ($)</label>
             <div id="displayPrice" class="display-box">0</div>
         </div>
 
@@ -108,61 +91,66 @@
             <div class="key" onclick="pressKey('1')">1</div><div class="key" onclick="pressKey('2')">2</div><div class="key" onclick="pressKey('3')">3</div>
             <div class="key" onclick="pressKey('4')">4</div><div class="key" onclick="pressKey('5')">5</div><div class="key" onclick="pressKey('6')">6</div>
             <div class="key" onclick="pressKey('7')">7</div><div class="key" onclick="pressKey('8')">8</div><div class="key" onclick="pressKey('9')">9</div>
-            <div class="key action" onclick="pressKey('.')">.</div><div class="key" onclick="pressKey('0')">0</div><div class="key action" onclick="pressKey('DEL')">刪</div>
+            <div class="key action" onclick="pressKey('.')">.</div><div class="key" onclick="pressKey('0')">0</div><div class="key action" onclick="pressKey('DEL')">刪除</div>
         </div>
 
-        <button class="btn-save" onclick="vibrate(); saveRecord()">確認儲存</button>
+        <button class="btn-save" onclick="hb(); saveRecord()">確認儲存記錄</button>
     </div>
 
-    <div class="total-row">
-        <h3 id="tableTitle" style="font-size: 20px; margin: 0;">紀錄</h3>
-        <div id="dayTotal" style="font-size:20px; font-weight:900; color:var(--primary);">總計: $0</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:0 10px;">
+        <h3 id="tableTitle" style="font-size:22px;">紀錄</h3>
+        <div id="dayTotal" style="font-size:22px; font-weight:900; color:var(--primary);">總計: $0</div>
     </div>
-    <div id="recordList" class="record-list"></div>
+    <div id="recordList"></div>
 </div>
 
 <div id="adminSection" class="hidden">
     <div class="card">
-        <h2 style="font-size: 22px; margin-top: 0;">⚙️ 管理後台</h2>
-        <div style="border: 1px solid #ccc; padding: 12px; border-radius: 12px; margin-bottom: 15px;">
-            <label>新增分類</label>
-            <input type="text" id="newCatName">
-            <button class="btn-save" onclick="vibrate(); addCategory()" style="height: 50px; font-size: 18px; margin-top: 5px;">新增分類</button>
+        <h2 style="font-size: 24px;">⚙️ 管理後台</h2>
+        
+        <div style="background:#f0f0f0; padding:15px; border-radius:12px; margin-bottom:15px;">
+            <label>1. 新增分類</label>
+            <input type="text" id="newCatName" placeholder="輸入名稱">
+            <button class="btn-save" style="height:50px; font-size:18px; margin-top:5px;" onclick="hb(); addCategory()">確定新增分類</button>
         </div>
-        <div style="border: 1px solid #ccc; padding: 12px; border-radius: 12px; margin-bottom: 15px;">
-            <label>新增型號</label>
+
+        <div style="background:#f0f0f0; padding:15px; border-radius:12px; margin-bottom:15px;">
+            <label>2. 新增型號</label>
             <select id="targetCat"></select>
-            <input type="text" id="newModelName">
-            <button class="btn-save" onclick="vibrate(); addModel()" style="height: 50px; font-size: 18px; margin-top: 5px;">新增型號</button>
+            <input type="text" id="newModelName" placeholder="輸入型號">
+            <button class="btn-save" style="height:50px; font-size:18px; margin-top:5px;" onclick="hb(); addModel()">確定新增型號</button>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="font-size:20px;">📋 產品管理清單</h3>
+            <button onclick="renderAdminConfigList()" style="padding:5px 10px; border-radius:5px; border:1px solid #666; font-size:14px;">刷新清單</button>
         </div>
         <div id="adminConfigList"></div>
-        <button onclick="vibrate(); toggleAdmin()" style="height: 60px; width:100%; border-radius: 12px; font-size: 20px; background:#666; color:white; border:none; font-weight:bold; margin-top:10px;">返回錄入</button>
+
+        <button onclick="hb(); toggleAdmin()" style="width:100%; height:65px; background:#444; color:white; border:none; border-radius:15px; font-size:22px; font-weight:bold; margin-top:20px;">完成並返回</button>
     </div>
 </div>
 
 <script>
-    let products = JSON.parse(localStorage.getItem('exp_products')) || { "手機": ["iPhone 15"] };
+    let products = JSON.parse(localStorage.getItem('exp_products')) || { "手機": ["iPhone 15 Pro"] };
     let sales = JSON.parse(localStorage.getItem('exp_sales')) || [];
     let activeInput = 'receipt';
     let inputValues = { qty: '1', receipt: '', price: '0' };
 
     document.getElementById('saleDate').valueAsDate = new Date();
 
-    function vibrate() { if (navigator.vibrate) navigator.vibrate(40); }
+    function hb() { if (window.navigator && window.navigator.vibrate) { window.navigator.vibrate(50); } }
 
     function setActiveInput(type) {
-        vibrate();
-        activeInput = type;
+        hb(); activeInput = type;
         document.querySelectorAll('.display-box').forEach(el => el.classList.remove('active'));
         document.getElementById('display' + type.charAt(0).toUpperCase() + type.slice(1)).classList.add('active');
     }
 
     function pressKey(key) {
-        vibrate();
-        let val = inputValues[activeInput];
-        if (key === 'DEL') {
-            inputValues[activeInput] = val.length > 1 ? val.slice(0, -1) : (activeInput === 'receipt' ? '' : '0');
-        } else {
+        hb(); let val = inputValues[activeInput];
+        if (key === 'DEL') { inputValues[activeInput] = val.length > 1 ? val.slice(0, -1) : (activeInput === 'receipt' ? '' : '0'); } 
+        else {
             if (activeInput !== 'receipt' && val === '0' && key !== '.') val = '';
             if (key === '.' && val.includes('.')) return;
             inputValues[activeInput] = val + key;
@@ -172,7 +160,7 @@
 
     function updateDisplays() {
         document.getElementById('displayQty').innerText = inputValues.qty;
-        document.getElementById('displayReceipt').innerText = inputValues.receipt || '請輸入';
+        document.getElementById('displayReceipt').innerText = inputValues.receipt || '請點擊輸入';
         document.getElementById('displayPrice').innerText = inputValues.price;
     }
 
@@ -186,40 +174,31 @@
 
     function refreshAll() {
         const cats = Object.keys(products);
-        document.getElementById('saleCat').innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
-        document.getElementById('targetCat').innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        const catHtml = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        document.getElementById('saleCat').innerHTML = catHtml;
+        document.getElementById('targetCat').innerHTML = catHtml;
         onCategoryChange();
         renderSalesList();
         renderAdminConfigList();
         localStorage.setItem('exp_products', JSON.stringify(products));
         localStorage.setItem('exp_sales', JSON.stringify(sales));
-        setActiveInput(activeInput);
+        updateDisplays();
     }
 
     function saveRecord() {
         const model = document.getElementById('saleModel').value;
-        if (!model) return alert("❌ 請選擇型號");
-        if (!inputValues.receipt) return alert("❌ 請輸入收據編號");
-        if (parseFloat(inputValues.price) <= 0) return alert("❌ 金額不能為0");
-
-        sales.unshift({
-            id: Date.now(),
-            date: document.getElementById('saleDate').value,
-            cat: document.getElementById('saleCat').value,
-            model: model,
-            qty: parseInt(inputValues.qty),
-            receipt: inputValues.receipt,
-            price: parseFloat(inputValues.price)
-        });
-        inputValues.receipt = '';
-        inputValues.price = '0';
-        refreshAll();
-        alert("✅ 儲存成功");
+        if (!model) return alert("❌ 請選擇型號！");
+        if (!inputValues.receipt) return alert("❌ 請輸入收據編號！");
+        if (parseFloat(inputValues.price) <= 0) return alert("❌ 請輸入正確金額！");
+        sales.unshift({ id: Date.now(), date: document.getElementById('saleDate').value, cat: document.getElementById('saleCat').value, model: model, qty: parseInt(inputValues.qty), receipt: inputValues.receipt, price: parseFloat(inputValues.price) });
+        inputValues.receipt = ''; inputValues.price = '0'; refreshAll(); alert("✅ 儲存成功！");
     }
 
     function toggleAdmin() {
         document.getElementById('salesSection').classList.toggle('hidden');
         document.getElementById('adminSection').classList.toggle('hidden');
+        if(document.getElementById('adminSection').classList.contains('hidden')) refreshAll();
+        else renderAdminConfigList(); // 進入時強制刷新
     }
 
     function addCategory() {
@@ -233,41 +212,60 @@
         if(cat && model) { products[cat].push(model); document.getElementById('newModelName').value = ''; refreshAll(); alert('已新增'); }
     }
 
+    // --- 強化版後台清單渲染 ---
     function renderAdminConfigList() {
+        const container = document.getElementById('adminConfigList');
         let html = '';
         for (let cat in products) {
-            html += `<div class="admin-item"><strong>${cat}</strong>: <small>${products[cat].join(', ')}</small></div>`;
-        }
-        document.getElementById('adminConfigList').innerHTML = html;
-    }
-
-    function renderSalesList() {
-        const selectedDate = document.getElementById('saleDate').value;
-        const filtered = sales.filter(s => s.date === selectedDate);
-        let total = 0;
-        document.getElementById('recordList').innerHTML = filtered.map(s => {
-            total += s.price;
-            return `
-            <div class="swipe-item">
-                <div class="swipe-action" onclick="deleteRecord(${s.id})">刪除</div>
-                <div class="swipe-content" ontouchstart="handleTS(event)" ontouchmove="handleTM(event)" ontouchend="handleTE(event)">
-                    <div class="record-header"><div class="info-main-text">${s.model} : ${s.qty}件</div><div class="info-price-text">$${s.price}</div></div>
-                    <div><span class="info-receipt-text">收據: ${s.receipt}</span></div>
+            html += `<div class="admin-box-item">
+                <div class="cat-title-row">
+                    <strong style="font-size:22px; color:var(--primary);">${cat}</strong>
+                    <div class="del-btn-text" onclick="deleteCat('${cat}')">刪除整類</div>
+                </div>
+                <div>
+                    ${products[cat].map(m => `
+                        <div class="model-row-item">
+                            <span style="font-size:18px;">${m}</span>
+                            <div class="del-btn-text" style="color:#666; border-color:#ccc;" onclick="deleteModel('${cat}', '${m}')">刪除型號</div>
+                        </div>
+                    `).join('')}
                 </div>
             </div>`;
-        }).join('') || '<div style="padding:20px; text-align:center; color:#888;">無紀錄</div>';
-        document.getElementById('dayTotal').innerText = `總計: $${total}`;
+        }
+        container.innerHTML = html || '<p>尚未建立產品</p>';
     }
 
-    function deleteRecord(id) { if(confirm("確定刪除？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
+    function deleteCat(cat) { hb(); if(confirm(`⚠️ 確定要刪除整個「${cat}」分類嗎？`)) { delete products[cat]; refreshAll(); } }
+    function deleteModel(cat, model) { hb(); if(confirm(`確定要刪除型號「${model}」嗎？`)) { products[cat] = products[cat].filter(m => m !== model); refreshAll(); } }
 
-    let startX = 0; let currentItem = null;
-    function handleTS(e) { startX = e.touches[0].clientX; currentItem = e.currentTarget; currentItem.style.transition = 'none'; }
-    function handleTM(e) { let diff = startX - e.touches[0].clientX; if (diff > 0 && diff < 100) currentItem.style.transform = `translateX(-${diff}px)`; }
-    function handleTE(e) { currentItem.style.transition = 'transform 0.3s ease'; if (startX - e.changedTouches[0].clientX > 50) currentItem.style.transform = `translateX(-80px)`; else currentItem.style.transform = `translateX(0px)`; }
+    function renderSalesList() {
+        const sD = document.getElementById('saleDate').value;
+        const filtered = sales.filter(s => s.date === sD);
+        let t = 0;
+        document.getElementById('recordList').innerHTML = filtered.map(s => {
+            t += s.price;
+            return `<div class="swipe-item">
+                <div class="swipe-action" onclick="deleteRecord(${s.id})">刪除</div>
+                <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:20px; font-weight:900;">${s.model} : ${s.qty}件</span>
+                        <span style="font-size:22px; font-weight:900; color:var(--danger);">$${s.price}</span>
+                    </div>
+                    <div style="margin-top:5px;"><span class="info-receipt-text">收據: ${s.receipt}</span></div>
+                </div>
+            </div>`;
+        }).join('') || '<div style="padding:30px; text-align:center; color:#888; font-size:20px;">今日無紀錄</div>';
+        document.getElementById('dayTotal').innerText = `總計: $${t}`;
+    }
+
+    function deleteRecord(id) { hb(); if(confirm("確定刪除此銷售紀錄？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
+
+    let sX = 0; let cur = null;
+    function hTS(e) { sX = e.touches[0].clientX; cur = e.currentTarget; cur.style.transition = 'none'; }
+    function hTM(e) { let d = sX - e.touches[0].clientX; if (d > 0 && d < 110) cur.style.transform = `translateX(-${d}px)`; }
+    function hTE(e) { cur.style.transition = 'transform 0.3s ease'; if (sX - e.changedTouches[0].clientX > 55) cur.style.transform = `translateX(-90px)`; else cur.style.transform = `translateX(0px)`; }
 
     refreshAll();
-    updateDisplays();
 </script>
 
 </body>
