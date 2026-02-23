@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日銷售記錄系統 V18</title>
+    <title>每日銷售記錄系統 V19</title>
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" type="image/png" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,20 +37,17 @@
 
         button.btn-save { width: 100%; height: 75px; background: var(--success); color: white; border: none; border-radius: 15px; font-size: 26px; font-weight: 900; margin-top: 15px; }
 
-        /* 橫拉樣式 */
         .swipe-container { position: relative; overflow: hidden; background: #fff; border-bottom: 1px solid #eee; touch-action: pan-y; }
         .swipe-content { display: flex; flex-direction: column; padding: 15px; background: white; position: relative; z-index: 2; transition: transform 0.3s ease; }
         .action-btn { position: absolute; top: 0; bottom: 0; width: 80px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; z-index: 1; }
         .action-del { right: 0; background: var(--danger); }
         .action-edit { left: 0; background: var(--info); }
 
-        /* 排序模式專用樣式 */
         .sorting-mode .swipe-content { border-left: 10px solid var(--warning); padding-left: 5px; }
         .sorting-handle { display: none; margin-right: 10px; color: #888; font-size: 20px; }
         .sorting-mode .sorting-handle { display: inline-block; }
-        .sorting-mode .swipe-container { pointer-events: auto; } /* 排序時關閉橫拉手勢由 JS 判斷 */
 
-        .btn-sort-toggle { background: #6c757d; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; margin-bottom: 10px; transition: 0.3s; }
+        .btn-sort-toggle { background: #6c757d; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 120px; transition: 0.3s; }
         .btn-sort-toggle.on { background: var(--warning); color: #000; }
 
         .admin-list-item { background: #fff; border: 1px solid #ccc; border-radius: 12px; margin-bottom: 15px; overflow: hidden; }
@@ -62,7 +59,7 @@
 
 <div id="mainUI">
     <div class="header-area">
-        <h2>每日銷售記錄系統 <span class="version-tag">V18</span></h2>
+        <h2>每日銷售記錄系統 <span class="version-tag">V19</span></h2>
         <div class="disclaimer">系統為實驗性質，如數據有所遺失，開發者一概並不負責</div>
         <div class="admin-trigger" onclick="hb(); toggleAdmin()">⚙️</div>
     </div>
@@ -102,7 +99,7 @@
 
 <div id="adminSection" class="hidden">
     <div class="card">
-        <h2>⚙️ 管理後台 <span class="version-tag">V18</span></h2>
+        <h2>⚙️ 管理後台 <span class="version-tag">V19</span></h2>
         <div style="background:#fff3cd; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #ffeeba;">
             <label>1. 模式切換</label>
             <select id="modeSelect" onchange="updateMode()">
@@ -115,8 +112,13 @@
             <input type="month" id="adminMonth" onchange="renderAdminConfigList()">
             <button id="btnCopy" class="btn-mini hidden" onclick="copyLastMonthIncentive()">把上月金額帶到本月</button>
         </div>
+        <div style="background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #ddd;">
+            <label>3. 新增產品類別</label>
+            <input type="text" id="newCatName" placeholder="例如：手錶">
+            <button class="btn-save" style="height:50px; font-size:18px; margin-top:10px;" onclick="addCategory()">確定新增類別</button>
+        </div>
         <div style="background:#f0f0f0; padding:15px; border-radius:12px; margin-bottom:15px;">
-            <label>3. 設定內容</label>
+            <label>4. 設定型號內容</label>
             <select id="targetCat" style="margin-bottom:10px;"></select>
             <input type="text" id="newModelName" placeholder="型號名稱" style="margin-bottom:10px;">
             <div id="adminIncWrapper" class="hidden">
@@ -126,8 +128,8 @@
         </div>
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3 style="font-size:16px; margin:0;">📋 產品清單管理</h3>
-            <button id="sortToggle" class="btn-sort-toggle" style="width:120px; margin:0;" onclick="toggleSortMode()">🔒 開啟排序</button>
+            <h3 style="font-size:16px; margin:0;">📋 產品清單</h3>
+            <button id="sortToggle" class="btn-sort-toggle" onclick="toggleSortMode()">🔒 開啟排序</button>
         </div>
         <div id="adminConfigList"></div>
         <button onclick="toggleAdmin()" style="width:100%; height:70px; background:#444; color:white; border-radius:15px; font-size:22px; margin-top:20px;">完成</button>
@@ -136,7 +138,7 @@
 
 <script>
     function getStoredProducts() {
-        let rawData = JSON.parse(localStorage.getItem('exp_products')) || { "手機": [] };
+        let rawData = JSON.parse(localStorage.getItem('exp_products')) || { "一般產品 (未分類)": [] };
         for (let cat in rawData) {
             rawData[cat] = rawData[cat].map(item => {
                 let obj = (typeof item === 'string') ? { name: item } : item;
@@ -158,22 +160,14 @@
     document.getElementById('saleDate').valueAsDate = today;
     document.getElementById('adminMonth').value = today.toISOString().substring(0, 7);
 
-    function hb() { if (navigator.vibrate) navigator.vibrate(60); }
+    function hb() { if (window.navigator && window.navigator.vibrate) { window.navigator.vibrate(60); } }
 
     function toggleSortMode() {
-        hb();
-        isSortingMode = !isSortingMode;
+        hb(); isSortingMode = !isSortingMode;
         const btn = document.getElementById('sortToggle');
-        const listContainer = document.getElementById('adminConfigList');
-        if (isSortingMode) {
-            btn.innerText = "🔓 鎖定排序";
-            btn.classList.add('on');
-            listContainer.classList.add('sorting-mode');
-        } else {
-            btn.innerText = "🔒 開啟排序";
-            btn.classList.remove('on');
-            listContainer.classList.remove('sorting-mode');
-        }
+        btn.innerText = isSortingMode ? "🔓 鎖定排序" : "🔒 開啟排序";
+        btn.classList.toggle('on', isSortingMode);
+        document.getElementById('adminConfigList').classList.toggle('sorting-mode', isSortingMode);
         renderAdminConfigList();
     }
 
@@ -224,7 +218,7 @@
 
     function onCategoryChange() {
         const cat = document.getElementById('saleCat').value;
-        if (!cat) { document.getElementById('saleModel').innerHTML = '<option value="">--請先選擇類別--</option>'; return; }
+        if (!cat) { document.getElementById('saleModel').innerHTML = '<option value="">--請選擇類別--</option>'; return; }
         const models = products[cat] || [];
         document.getElementById('saleModel').innerHTML = '<option value="">--請選擇--</option>' + models.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
     }
@@ -233,7 +227,7 @@
         updateMode();
         const cats = Object.keys(products);
         const lastTargetCat = document.getElementById('targetCat').value;
-        const catHtml = '<option value="">--請選擇--</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        const catHtml = '<option value="">--請選擇類別--</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
         document.getElementById('saleCat').innerHTML = catHtml;
         document.getElementById('targetCat').innerHTML = catHtml;
         if (lastTargetCat) document.getElementById('targetCat').value = lastTargetCat;
@@ -244,18 +238,27 @@
         localStorage.setItem('exp_sales', JSON.stringify(sales));
     }
 
+    function addCategory() {
+        const name = document.getElementById('newCatName').value.trim();
+        if(name && !products[name]) { products[name] = []; document.getElementById('newCatName').value = ''; refreshAll(); }
+    }
+
     function addModel() {
-        const cat = document.getElementById('targetCat').value;
+        let cat = document.getElementById('targetCat').value;
         const name = document.getElementById('newModelName').value.trim();
         const inc = parseFloat(document.getElementById('newModelInc').value) || 0;
         const month = document.getElementById('adminMonth').value;
-        if (cat && name) {
+
+        if (!cat) cat = "一般產品 (未分類)"; // V19：如果不選類別，歸類到大項
+
+        if (name) {
+            if (!products[cat]) products[cat] = [];
             let p = products[cat].find(x => x.name === name);
             if (p) { p.incs[month] = inc; } else { products[cat].push({ name, incs: { [month]: inc } }); }
             document.getElementById('newModelName').value = '';
             document.getElementById('newModelInc').value = '';
             refreshAll(); 
-        } else { alert("請填寫完整資訊"); }
+        } else { alert("請輸入型號名稱"); }
     }
 
     function renderAdminConfigList() {
@@ -285,22 +288,18 @@
                 </div>
             </div>`;
         }
-        document.getElementById('adminConfigList').innerHTML = html || '<p style="text-align:center; padding:20px; color:#999;">尚未設定資料</p>';
+        document.getElementById('adminConfigList').innerHTML = html;
         if(isSortingMode) initSortable();
     }
 
     function initSortable() {
         document.querySelectorAll('.sortable-list').forEach(el => {
             new Sortable(el, {
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                handle: '.sorting-handle', // 只有點擊 ☰ 才能拖動
+                animation: 150, handle: '.sorting-handle',
                 onEnd: function (evt) {
                     const cat = evt.from.getAttribute('data-cat');
-                    const movedItemName = evt.item.getAttribute('data-name');
                     const catModels = products[cat];
-                    const itemIdx = catModels.findIndex(p => p.name === movedItemName);
-                    const [movedItem] = catModels.splice(itemIdx, 1);
+                    const [movedItem] = catModels.splice(evt.oldIndex, 1);
                     catModels.splice(evt.newIndex, 0, movedItem);
                     localStorage.setItem('exp_products', JSON.stringify(products));
                     hb();
@@ -310,8 +309,7 @@
     }
 
     function editModel(cat, name) {
-        hb();
-        const month = document.getElementById('adminMonth').value;
+        hb(); const month = document.getElementById('adminMonth').value;
         const p = products[cat].find(x => x.name === name);
         document.getElementById('targetCat').value = cat;
         document.getElementById('newModelName').value = p.name;
@@ -355,20 +353,9 @@
     function deleteSale(id) { if(confirm("刪除？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
 
     let sX = 0, cur = null, type = "";
-    function hTS(e) { 
-        if(isSortingMode) return; // 排序模式下禁止滑動手勢
-        sX = e.touches[0].clientX; cur = e.currentTarget.parentElement; type = cur.getAttribute('data-type'); e.currentTarget.style.transition = 'none'; 
-    }
-    function hTM(e) { 
-        if(isSortingMode) return;
-        let d = sX - e.touches[0].clientX; 
-        if (type === 'cat' && d < 0) return; 
-        if (Math.abs(d) < 100) e.currentTarget.style.transform = `translateX(${-d}px)`; 
-    }
-    function hTE(e) { 
-        if(isSortingMode) return;
-        let d = sX - e.changedTouches[0].clientX;
-        e.currentTarget.style.transition = 'transform 0.3s ease';
+    function hTS(e) { if(isSortingMode) return; sX = e.touches[0].clientX; cur = e.currentTarget.parentElement; type = cur.getAttribute('data-type'); e.currentTarget.style.transition = 'none'; }
+    function hTM(e) { if(isSortingMode) return; let d = sX - e.touches[0].clientX; if (type === 'cat' && d < 0) return; if (Math.abs(d) < 100) e.currentTarget.style.transform = `translateX(${-d}px)`; }
+    function hTE(e) { if(isSortingMode) return; let d = sX - e.changedTouches[0].clientX; e.currentTarget.style.transition = 'transform 0.3s ease';
         if (d > 55) e.currentTarget.style.transform = `translateX(-80px)`; 
         else if (d < -55 && type === 'model') e.currentTarget.style.transform = `translateX(80px)`; 
         else e.currentTarget.style.transform = `translateX(0px)`;
