@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日銷售記錄系統 V12</title>
+    <title>每日銷售記錄系統 V13</title>
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" type="image/png" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,7 +16,7 @@
         .header-area { margin-bottom: 10px; padding-right: 50px; position: relative; }
         h2 { margin: 0; font-size: 22px; font-weight: 900; }
         .version-tag { font-size: 10px; color: #888; }
-        .disclaimer { font-size: 12px; color: #d93025; font-weight: bold; margin-top: 5px; line-height: 1.4; }
+        .disclaimer { font-size: 11px; color: #d93025; font-weight: bold; margin-top: 5px; line-height: 1.4; }
         .admin-trigger { position: absolute; top: 0; right: 0; font-size: 35px; padding: 5px; cursor: pointer; }
 
         .card { background: white; padding: 18px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
@@ -50,12 +50,12 @@
         .summary-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .summary-table th, .summary-table td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
 
-        .record-item { position: relative; overflow: hidden; background: #fff; border-bottom: 2px solid #eee; }
-        .record-content { display: flex; flex-direction: column; padding: 15px; background: white; position: relative; z-index: 2; transition: transform 0.3s; }
-        .record-delete-action { position: absolute; right: 0; top: 0; bottom: 0; width: 90px; background: var(--danger); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; z-index: 1; }
+        /* 橫拉樣式 (通用) */
+        .swipe-item { position: relative; overflow: hidden; background: #fff; border-bottom: 2px solid #eee; }
+        .swipe-content { display: flex; flex-direction: column; padding: 15px; background: white; position: relative; z-index: 2; transition: transform 0.3s; }
+        .swipe-action { position: absolute; right: 0; top: 0; bottom: 0; width: 90px; background: var(--danger); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; z-index: 1; font-size: 18px; }
 
-        .btn-del-outline { color: var(--danger); font-weight: bold; padding: 6px 12px; border: 1.5px solid var(--danger); border-radius: 8px; font-size: 14px; }
-        .admin-list-item { background: #fff; border: 1px solid #ccc; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+        .admin-list-item { background: #fff; border: 1px solid #ccc; padding: 0; border-radius: 12px; margin-bottom: 15px; overflow: hidden; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -63,14 +63,14 @@
 
 <div id="mainUI">
     <div class="header-area">
-        <h2>每日銷售記錄系統 <span class="version-tag">V12</span></h2>
+        <h2>每日銷售記錄系統 <span class="version-tag">V13</span></h2>
         <div class="disclaimer">系統為實驗性質，如數據有所遺失，開發者一概並不負責</div>
         <div class="admin-trigger" onclick="hb(); toggleAdmin()">⚙️</div>
     </div>
 
     <div id="salesSection">
         <div class="card">
-            <label>📅 選擇日期</label>
+            <label>📅 選擇日期 (自動抓取該月 Incentive)</label>
             <input type="date" id="saleDate" onchange="refreshAll()" style="margin-bottom:15px;">
 
             <div class="input-row">
@@ -119,42 +119,47 @@
 
 <div id="adminSection" class="hidden">
     <div class="card">
-        <h2>⚙️ 管理後台 <span class="version-tag">V12</span></h2>
+        <h2>⚙️ 管理後台 <span class="version-tag">V13</span></h2>
+        
         <div style="background:#fff3cd; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #ffeeba;">
-            <label>模式切換</label>
+            <label>1. 模式切換</label>
             <select id="modeSelect" onchange="updateMode()">
                 <option value="receipt">收據編號模式</option>
-                <option value="incentive">激勵獎金模式 (自動掛鉤)</option>
+                <option value="incentive">激勵獎金模式 (按月自動掛鉤)</option>
             </select>
         </div>
 
         <div style="background:#f0f0f0; padding:15px; border-radius:12px; margin-bottom:15px;">
-            <label>新增型號</label>
+            <label>2. 新增產品分類</label>
+            <input type="text" id="newCatName" placeholder="輸入名稱 (如：手錶)">
+            <button class="btn-save" style="height:50px; font-size:18px; margin-top:10px;" onclick="addCategory()">確定新增分類</button>
+        </div>
+
+        <div style="background:#f0f0f0; padding:15px; border-radius:12px; margin-bottom:15px;">
+            <label>3. 設定型號 (當月：<span id="currentAdminMonth"></span>)</label>
             <select id="targetCat" style="margin-bottom:10px;"></select>
             <input type="text" id="newModelName" placeholder="輸入型號名稱" style="margin-bottom:10px;">
             <div id="adminIncWrapper" class="hidden">
-                <label style="font-size:14px; margin-bottom:5px;">預設 Incentive 金額 ($)</label>
-                <input type="number" id="newModelInc" placeholder="例如: 50" style="height:50px; margin-bottom:10px;">
+                <input type="number" id="newModelInc" placeholder="設定此型號當月 Incentive ($)" style="height:50px; margin-bottom:10px;">
             </div>
             <button class="btn-save" style="height:55px; font-size:18px; margin-top:5px;" onclick="addModel()">確定新增型號</button>
         </div>
 
+        <h3 style="font-size:18px; margin-bottom:10px; padding-left:5px;">📋 產品清單 (橫拉即可刪除)</h3>
         <div id="adminConfigList"></div>
-        <button onclick="toggleAdmin()" style="width:100%; height:70px; background:#444; color:white; border-radius:15px; font-size:22px; margin-top:20px;">完成並返回</button>
+        <button onclick="toggleAdmin()" style="width:100%; height:70px; background:#444; color:white; border-radius:15px; font-size:22px; margin-top:20px;">完成</button>
     </div>
 </div>
 
 <script>
-    // --- V12 核心修復：資料格式相容層 ---
+    // 數據結構：products: { "類別": [ {name: "型號", incs: {"2026-02": 50, "2026-03": 30}} ] }
     function getStoredProducts() {
-        let rawData = JSON.parse(localStorage.getItem('exp_products')) || { "手機": ["iPhone 15 Pro"] };
-        // 遍歷所有類別，確保內容是物件而不是純字串
+        let rawData = JSON.parse(localStorage.getItem('exp_products')) || { "手機": [] };
         for (let cat in rawData) {
             rawData[cat] = rawData[cat].map(item => {
-                if (typeof item === 'string') {
-                    return { name: item, inc: 0 }; // 自動修補舊資料
-                }
-                return item;
+                let obj = (typeof item === 'string') ? { name: item } : item;
+                if (!obj.incs) obj.incs = {}; // 確保有按月存放 incentive 的物件
+                return obj;
             });
         }
         return rawData;
@@ -167,6 +172,10 @@
     let inputValues = { qty: '1', extra: '', price: '0' };
 
     function hb() { if (window.navigator && window.navigator.vibrate) { window.navigator.vibrate(60); } }
+
+    function getSelectedMonth() {
+        return document.getElementById('saleDate').value.substring(0, 7); // 回傳 "YYYY-MM"
+    }
 
     function updateMode() {
         config.mode = document.getElementById('modeSelect').value;
@@ -192,8 +201,9 @@
         if (config.mode === 'incentive') {
             const cat = document.getElementById('saleCat').value;
             const modelName = document.getElementById('saleModel').value;
+            const month = getSelectedMonth();
             const product = products[cat].find(p => p.name === modelName);
-            inputValues.extra = (product && product.inc) ? String(product.inc) : '0';
+            inputValues.extra = (product && product.incs && product.incs[month]) ? String(product.incs[month]) : '0';
             updateDisplays();
         }
     }
@@ -240,6 +250,7 @@
         const catHtml = cats.map(c => `<option value="${c}">${c}</option>`).join('');
         document.getElementById('saleCat').innerHTML = catHtml;
         document.getElementById('targetCat').innerHTML = catHtml;
+        document.getElementById('currentAdminMonth').innerText = getSelectedMonth();
         if (lastTargetCat && cats.includes(lastTargetCat)) document.getElementById('targetCat').value = lastTargetCat;
         onCategoryChange();
         renderSalesList();
@@ -248,38 +259,62 @@
         localStorage.setItem('exp_sales', JSON.stringify(sales));
     }
 
+    function addCategory() {
+        const name = document.getElementById('newCatName').value.trim();
+        if(name && !products[name]) { products[name] = []; document.getElementById('newCatName').value = ''; refreshAll(); }
+    }
+
     function addModel() {
         const cat = document.getElementById('targetCat').value;
         const name = document.getElementById('newModelName').value.trim();
         const inc = parseFloat(document.getElementById('newModelInc').value) || 0;
+        const month = getSelectedMonth();
+
         if (cat && name) {
-            products[cat].push({ name, inc });
+            let existing = products[cat].find(p => p.name === name);
+            if (existing) {
+                existing.incs[month] = inc; // 如果型號已存在，更新該月 Incentive
+            } else {
+                let newP = { name, incs: {} };
+                newP.incs[month] = inc;
+                products[cat].push(newP);
+            }
             document.getElementById('newModelName').value = '';
             document.getElementById('newModelInc').value = '';
             refreshAll();
-            alert('✅ 型號已新增');
+            alert(`✅ ${name} 在 ${month} 的設定已更新`);
         }
     }
 
+    // 後台橫拉刪除列表
     function renderAdminConfigList() {
         let html = '';
+        const month = getSelectedMonth();
         for (let cat in products) {
             html += `<div class="admin-list-item">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:5px;">
-                    <strong>${cat}</strong>
-                    <div class="btn-del-outline" onclick="deleteCat('${cat}')">刪除整類</div>
+                <div class="swipe-item">
+                    <div class="swipe-action" onclick="deleteCat('${cat}')">刪除整類</div>
+                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="background:#f8f9fa; border-bottom:1px solid #ddd; padding:12px;">
+                        <strong style="font-size:20px; color:var(--primary);">${cat}</strong>
+                    </div>
                 </div>
-                ${products[cat].map((p, idx) => `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f9f9f9;">
-                    <span>${p.name} ${p.inc > 0 ? `<span style="color:var(--success); font-size:12px;">($${p.inc})</span>` : ''}</span>
-                    <div class="btn-del-outline" style="color:#666; border-color:#ccc;" onclick="deleteModel('${cat}', ${idx})">刪除</div>
+                ${products[cat].map((p, idx) => `
+                <div class="swipe-item">
+                    <div class="swipe-action" onclick="deleteModel('${cat}', ${idx})">刪除</div>
+                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="padding:12px;">
+                        <div style="display:flex; justify-content:space-between; width:100%;">
+                            <span>${p.name}</span>
+                            <span style="color:var(--success); font-weight:bold;">${month}: $${p.incs[month] || 0}</span>
+                        </div>
+                    </div>
                 </div>`).join('')}
             </div>`;
         }
         document.getElementById('adminConfigList').innerHTML = html || '<p style="text-align:center; color:#999;">尚未設定產品</p>';
     }
 
-    function deleteCat(cat) { hb(); if(confirm(`確定刪除整類「${cat}」？`)) { delete products[cat]; refreshAll(); } }
-    function deleteModel(cat, idx) { hb(); products[cat].splice(idx, 1); refreshAll(); }
+    function deleteCat(cat) { hb(); if(confirm(`⚠️ 確定要刪除整類「${cat}」嗎？此操作無法恢復。`)) { delete products[cat]; refreshAll(); } }
+    function deleteModel(cat, idx) { hb(); if(confirm(`確定要刪除此型號嗎？`)) { products[cat].splice(idx, 1); refreshAll(); } }
 
     function saveRecord() {
         const model = document.getElementById('saleModel').value;
@@ -328,9 +363,9 @@
         let t = 0;
         document.getElementById('recordList').innerHTML = filtered.map(s => {
             t += s.price;
-            return `<div class="record-item">
-                <div class="record-delete-action" onclick="deleteSale(${s.id})">刪除</div>
-                <div class="record-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)">
+            return `<div class="swipe-item">
+                <div class="swipe-action" onclick="deleteSale(${s.id})">刪除</div>
+                <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong style="font-size:18px;">${s.model} (x${s.qty})</strong>
                         <strong style="color:var(--danger); font-size:20px;">$${s.price}</strong>
@@ -344,10 +379,18 @@
 
     function deleteSale(id) { hb(); if(confirm("確定刪除此紀錄？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
     
+    // 橫拉邏輯 (核心優化)
     let sX = 0, cur = null;
     function hTS(e) { sX = e.touches[0].clientX; cur = e.currentTarget; cur.style.transition = 'none'; }
-    function hTM(e) { let d = sX - e.touches[0].clientX; if (d > 0 && d < 110) cur.style.transform = `translateX(-${d}px)`; }
-    function hTE(e) { cur.style.transition = 'transform 0.3s ease'; if (sX - e.changedTouches[0].clientX > 55) cur.style.transform = `translateX(-90px)`; else cur.style.transform = `translateX(0px)`; }
+    function hTM(e) { 
+        let d = sX - e.touches[0].clientX; 
+        if (d > 0 && d < 110) cur.style.transform = `translateX(-${d}px)`; 
+    }
+    function hTE(e) { 
+        cur.style.transition = 'transform 0.3s ease'; 
+        if (sX - e.changedTouches[0].clientX > 55) cur.style.transform = `translateX(-90px)`; 
+        else cur.style.transform = `translateX(0px)`; 
+    }
 
     document.getElementById('saleDate').valueAsDate = new Date();
     refreshAll();
