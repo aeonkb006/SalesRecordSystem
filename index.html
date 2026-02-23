@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日銷售記錄系統 V14</title>
+    <title>每日銷售記錄系統 V16</title>
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" type="image/png" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
-        :root { --primary: #0056b3; --success: #218838; --danger: #d93025; --dark: #000000; }
+        :root { --primary: #0056b3; --success: #218838; --danger: #d93025; --info: #17a2b8; --dark: #000000; }
         body { font-family: -apple-system, sans-serif; padding: 15px; background: #f0f2f5; margin: 0; color: var(--dark); user-select: none; }
         
         .header-area { margin-bottom: 10px; padding-right: 50px; position: relative; }
@@ -22,19 +22,10 @@
         .card { background: white; padding: 18px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
         label { display: block; font-weight: 800; margin-bottom: 8px; font-size: 17px; color: #333; }
         
-        .input-row { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }
-        .input-item { flex: 1; min-width: 0; }
+        select, input { width: 100%; height: 55px; border: 2px solid #888; border-radius: 10px; font-size: 20px; font-weight: bold; box-sizing: border-box; background: #fff; }
+        input:disabled { background: #e9ecef; color: #adb5bd; border-color: #dee2e6; }
 
-        select, input[type="text"], input[type="date"], input[type="number"], input[type="month"] { 
-            width: 100%; height: 55px; border: 2px solid #888; border-radius: 10px; 
-            font-size: 20px; font-weight: bold; box-sizing: border-box; background: #fff;
-        }
-
-        .display-box { 
-            width: 100%; height: 55px; border: 2px solid #888; border-radius: 10px; 
-            font-size: 24px; font-weight: bold; display: flex; align-items: center; 
-            padding: 0 10px; box-sizing: border-box; background: #fff;
-        }
+        .display-box { width: 100%; height: 55px; border: 2px solid #888; border-radius: 10px; font-size: 24px; font-weight: bold; display: flex; align-items: center; padding: 0 10px; box-sizing: border-box; background: #fff; margin-bottom: 15px;}
         .display-box.active { border-color: var(--primary); background: #eef6ff; box-shadow: 0 0 8px rgba(0,86,179,0.3); }
         .display-box.readonly { background: #e9ecef; color: #495057; border-color: #ced4da; }
 
@@ -44,48 +35,41 @@
         .key.action { background: #6b7280; color: white; }
 
         button.btn-save { width: 100%; height: 75px; background: var(--success); color: white; border: none; border-radius: 15px; font-size: 26px; font-weight: 900; margin-top: 15px; }
-        
-        /* 總結 Overlay */
-        #summaryOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; display: none; overflow-y: auto; padding: 20px 10px; }
-        .summary-card { background: white; border-radius: 20px; padding: 20px; max-width: 500px; margin: 0 auto; }
-        .summary-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .summary-table th, .summary-table td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
 
-        /* 橫拉樣式 */
-        .swipe-item { position: relative; overflow: hidden; background: #fff; border-bottom: 2px solid #eee; }
-        .swipe-content { display: flex; flex-direction: column; padding: 15px; background: white; position: relative; z-index: 2; transition: transform 0.3s; }
-        .swipe-action { position: absolute; right: 0; top: 0; bottom: 0; width: 90px; background: var(--danger); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; z-index: 1; font-size: 18px; }
+        /* 雙向橫拉 */
+        .swipe-container { position: relative; overflow: hidden; background: #fff; border-bottom: 1px solid #eee; }
+        .swipe-content { display: flex; flex-direction: column; padding: 15px; background: white; position: relative; z-index: 2; transition: transform 0.3s ease; }
+        .action-btn { position: absolute; top: 0; bottom: 0; width: 80px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; z-index: 1; font-size: 16px; }
+        .action-del { right: 0; background: var(--danger); }
+        .action-edit { left: 0; background: var(--info); }
 
         .admin-list-item { background: #fff; border: 1px solid #ccc; border-radius: 12px; margin-bottom: 15px; overflow: hidden; }
         .hidden { display: none !important; }
-        .btn-mini { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; }
+        .btn-mini { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div id="mainUI">
     <div class="header-area">
-        <h2>每日銷售記錄系統 <span class="version-tag">V14</span></h2>
+        <h2>每日銷售記錄系統 <span class="version-tag">V16</span></h2>
         <div class="disclaimer">系統為實驗性質，如數據有所遺失，開發者一概並不負責</div>
         <div class="admin-trigger" onclick="hb(); toggleAdmin()">⚙️</div>
     </div>
 
     <div id="salesSection">
         <div class="card">
-            <label>📅 銷售日期 (根據此月抓 Incentive)</label>
+            <label>📅 銷售日期</label>
             <input type="date" id="saleDate" onchange="refreshAll()" style="margin-bottom:15px;">
 
-            <div class="input-row">
-                <div class="input-item"><label>類別</label><select id="saleCat" onchange="onCategoryChange()"></select></div>
-                <div class="input-item"><label>型號</label><select id="saleModel" onchange="onModelSelectChange()"></select></div>
+            <div style="display: flex; gap: 10px; margin-bottom:15px;">
+                <div style="flex:1;"><label>類別</label><select id="saleCat" onchange="onCategoryChange()"></select></div>
+                <div style="flex:1;"><label>型號</label><select id="saleModel" onchange="onModelSelectChange()"></select></div>
             </div>
 
-            <div class="input-row">
-                <div class="input-item" onclick="setActiveInput('qty')"><label>數量</label><div id="displayQty" class="display-box">1</div></div>
-                <div class="input-item" id="extraWrapper" onclick="setActiveInput('extra')">
-                    <label id="dynamicLabel">收據編號</label>
-                    <div id="displayExtra" class="display-box"></div>
-                </div>
+            <div style="display: flex; gap: 10px;">
+                <div style="flex:1;" onclick="setActiveInput('qty')"><label>數量</label><div id="displayQty" class="display-box">1</div></div>
+                <div style="flex:1;" onclick="setActiveInput('extra')"><label id="dynamicLabel">收據編號</label><div id="displayExtra" class="display-box"></div></div>
             </div>
 
             <div onclick="setActiveInput('price')"><label>💰 金額 ($)</label><div id="displayPrice" class="display-box">0</div></div>
@@ -98,7 +82,6 @@
             </div>
             <button class="btn-save" onclick="hb(); saveRecord()">確認儲存記錄</button>
         </div>
-
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px;">
             <button onclick="showSummary()" style="background:var(--primary); color:white; border:none; padding:12px 20px; border-radius:12px; font-weight:bold; font-size:18px;">📋 今日總結</button>
             <div id="dayTotal" style="font-size:20px; font-weight:900; color:var(--primary);">總額: $0</div>
@@ -107,22 +90,9 @@
     </div>
 </div>
 
-<div id="summaryOverlay">
-    <div class="summary-card">
-        <h2 style="text-align:center; margin-top:0;">今日銷售結算</h2>
-        <table class="summary-table">
-            <thead><tr><th>型號</th><th style="text-align:center;">數量</th><th style="text-align:right;">小計</th></tr></thead>
-            <tbody id="summaryTableBody"></tbody>
-        </table>
-        <div id="incentiveTotalArea" style="margin-top:20px; font-size:18px; color:var(--success); font-weight:bold; text-align:center;"></div>
-        <button onclick="closeSummary()" style="width:100%; height:60px; background:#444; color:white; border:none; border-radius:12px; font-size:20px; margin-top:25px;">關閉</button>
-    </div>
-</div>
-
 <div id="adminSection" class="hidden">
     <div class="card">
-        <h2>⚙️ 管理後台 <span class="version-tag">V14</span></h2>
-        
+        <h2>⚙️ 管理後台 <span class="version-tag">V16</span></h2>
         <div style="background:#fff3cd; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #ffeeba;">
             <label>1. 模式切換</label>
             <select id="modeSelect" onchange="updateMode()">
@@ -130,28 +100,23 @@
                 <option value="incentive">激勵獎金模式 (按月自動掛鉤)</option>
             </select>
         </div>
-
-        <div style="background:#eef6ff; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #d1e9ff;">
-            <label>2. 設定月份 (管理特定月份 Incentive)</label>
+        <div style="background:#eef6ff; padding:15px; border-radius:12px; margin-bottom:15px;">
+            <label>2. 管理月份 <span id="adminMonthLabel" style="font-size:12px; color:var(--danger);"></span></label>
             <input type="month" id="adminMonth" onchange="renderAdminConfigList()">
-            <div id="copyActionArea" style="margin-top:10px;" class="hidden">
-                <button class="btn-mini" onclick="copyLastMonthIncentive()">把上個月金額帶到本月</button>
-            </div>
+            <button id="btnCopy" class="btn-mini hidden" onclick="copyLastMonthIncentive()">把上月金額帶到本月</button>
         </div>
-
         <div style="background:#f0f0f0; padding:15px; border-radius:12px; margin-bottom:15px;">
-            <label>3. 設定型號名稱及 Incentive</label>
+            <label>3. 設定內容</label>
             <select id="targetCat" style="margin-bottom:10px;"></select>
             <input type="text" id="newModelName" placeholder="型號名稱" style="margin-bottom:10px;">
             <div id="adminIncWrapper" class="hidden">
-                <input type="number" id="newModelInc" placeholder="設定該月 Incentive ($)" style="height:50px; margin-bottom:10px;">
+                <input type="number" id="newModelInc" placeholder="設定 Incentive ($)" style="height:50px;">
             </div>
-            <button class="btn-save" style="height:55px; font-size:18px; margin-top:5px;" onclick="addModel()">確定新增/更新型號</button>
+            <button class="btn-save" style="height:55px; font-size:18px; margin-top:10px;" onclick="addModel()">確認儲存/更新</button>
         </div>
-
-        <h3 style="font-size:18px; margin-bottom:10px;">📋 產品清單 (橫拉刪除)</h3>
+        <h3 style="font-size:16px;">📋 清單 (左滑編輯 / 右滑刪除)</h3>
         <div id="adminConfigList"></div>
-        <button onclick="toggleAdmin()" style="width:100%; height:70px; background:#444; color:white; border-radius:15px; font-size:22px; margin-top:20px;">完成並返回</button>
+        <button onclick="toggleAdmin()" style="width:100%; height:70px; background:#444; color:white; border-radius:15px; font-size:22px; margin-top:20px;">完成</button>
     </div>
 </div>
 
@@ -174,31 +139,44 @@
     let activeInput = 'extra';
     let inputValues = { qty: '1', extra: '', price: '0' };
 
-    // 初始化日期
     const today = new Date();
     document.getElementById('saleDate').valueAsDate = today;
     document.getElementById('adminMonth').value = today.toISOString().substring(0, 7);
 
     function hb() { if (navigator.vibrate) navigator.vibrate(60); }
 
-    function getSaleMonth() { return document.getElementById('saleDate').value.substring(0, 7); }
-    function getAdminMonth() { return document.getElementById('adminMonth').value; }
-
     function updateMode() {
         config.mode = document.getElementById('modeSelect').value;
         localStorage.setItem('exp_config', JSON.stringify(config));
+        
+        const labelEl = document.getElementById('dynamicLabel');
+        const extraBox = document.getElementById('displayExtra');
+        const adminIncArea = document.getElementById('adminIncWrapper');
+        const adminMonthInput = document.getElementById('adminMonth');
+        const adminMonthLabel = document.getElementById('adminMonthLabel');
+        const btnCopy = document.getElementById('btnCopy');
+
         document.getElementById('dynamicLabel').innerText = (config.mode === 'receipt') ? '收據編號' : 'Incentive ($)';
-        document.getElementById('adminIncWrapper').classList.toggle('hidden', config.mode !== 'incentive');
-        document.getElementById('copyActionArea').classList.toggle('hidden', config.mode !== 'incentive');
-        document.getElementById('displayExtra').classList.toggle('readonly', config.mode === 'incentive');
+        extraBox.classList.toggle('readonly', config.mode === 'incentive');
+        adminIncArea.classList.toggle('hidden', config.mode !== 'incentive');
+
+        // V16 核心邏輯：鎖定月份選擇器
+        if (config.mode === 'receipt') {
+            adminMonthInput.disabled = true;
+            adminMonthLabel.innerText = "(收據模式不需選擇月份)";
+            btnCopy.classList.add('hidden');
+        } else {
+            adminMonthInput.disabled = false;
+            adminMonthLabel.innerText = "";
+            btnCopy.classList.remove('hidden');
+        }
     }
 
     function onModelSelectChange() {
-        hb();
         if (config.mode === 'incentive') {
             const cat = document.getElementById('saleCat').value;
             const name = document.getElementById('saleModel').value;
-            const month = getSaleMonth();
+            const month = document.getElementById('saleDate').value.substring(0, 7);
             const p = products[cat].find(x => x.name === name);
             inputValues.extra = (p && p.incs && p.incs[month]) ? String(p.incs[month]) : '0';
             updateDisplays();
@@ -225,16 +203,14 @@
 
     function updateDisplays() {
         document.getElementById('displayQty').innerText = inputValues.qty;
-        document.getElementById('displayExtra').innerText = inputValues.extra || (config.mode === 'receipt' ? '請輸入' : '0');
+        document.getElementById('displayExtra').innerText = inputValues.extra || (config.mode === 'receipt' ? '請輸入' : '');
         document.getElementById('displayPrice').innerText = inputValues.price;
     }
 
     function onCategoryChange() {
         const cat = document.getElementById('saleCat').value;
         const models = products[cat] || [];
-        let html = '<option value="">--請選擇型號--</option>' + models.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-        document.getElementById('saleModel').innerHTML = html;
-        inputValues.extra = ''; updateDisplays();
+        document.getElementById('saleModel').innerHTML = '<option value="">--請選擇--</option>' + models.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
     }
 
     function refreshAll() {
@@ -254,7 +230,7 @@
         const cat = document.getElementById('targetCat').value;
         const name = document.getElementById('newModelName').value.trim();
         const inc = parseFloat(document.getElementById('newModelInc').value) || 0;
-        const month = getAdminMonth();
+        const month = document.getElementById('adminMonth').value;
 
         if (cat && name) {
             let p = products[cat].find(x => x.name === name);
@@ -265,54 +241,66 @@
             }
             document.getElementById('newModelName').value = '';
             document.getElementById('newModelInc').value = '';
-            refreshAll(); alert(`✅ 已更新 ${month} 設定`);
+            refreshAll(); alert(`✅ 已儲存`);
         }
     }
 
     function copyLastMonthIncentive() {
-        const currentMonthStr = getAdminMonth();
-        const date = new Date(currentMonthStr + "-01");
+        const currentMonth = document.getElementById('adminMonth').value;
+        const date = new Date(currentMonth + "-01");
         date.setMonth(date.getMonth() - 1);
-        const lastMonthStr = date.toISOString().substring(0, 7);
-
-        if(confirm(`確定要將 ${lastMonthStr} 的所有金額帶到 ${currentMonthStr} 嗎？`)) {
+        const lastMonth = date.toISOString().substring(0, 7);
+        if(confirm(`將 ${lastMonth} 金額帶到 ${currentMonth}？`)) {
             for (let cat in products) {
-                products[cat].forEach(p => {
-                    if (p.incs[lastMonthStr] !== undefined) {
-                        p.incs[currentMonthStr] = p.incs[lastMonthStr];
-                    }
-                });
+                products[cat].forEach(p => { if (p.incs[lastMonth] !== undefined) p.incs[currentMonth] = p.incs[lastMonth]; });
             }
-            refreshAll(); alert(`✅ 已同步 ${lastMonthStr} 的金額到本月`);
+            refreshAll();
         }
     }
 
     function renderAdminConfigList() {
         let html = '';
-        const month = getAdminMonth();
+        const month = document.getElementById('adminMonth').value;
+        const isIncMode = (config.mode === 'incentive');
         for (let cat in products) {
+            let filteredModels = isIncMode ? products[cat].filter(p => p.incs[month] !== undefined) : products[cat];
             html += `<div class="admin-list-item">
-                <div class="swipe-item"><div class="swipe-action" onclick="deleteCat('${cat}')">刪除整類</div>
-                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="background:#f8f9fa; padding:12px;"><strong>${cat}</strong></div>
+                <div class="swipe-container">
+                    <div class="action-btn action-del" onclick="deleteCat('${cat}')">刪除</div>
+                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="background:#eee; padding:10px; font-weight:bold;">${cat}</div>
                 </div>
-                ${products[cat].map((p, idx) => `
-                <div class="swipe-item"><div class="swipe-action" onclick="deleteModel('${cat}', ${idx})">刪除</div>
+                ${filteredModels.map((p, idx) => `
+                <div class="swipe-container">
+                    <div class="action-btn action-edit" onclick="editModel('${cat}', '${p.name}')">編輯</div>
+                    <div class="action-btn action-del" onclick="deleteModel('${cat}', '${p.name}')">刪除</div>
                     <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="padding:12px;">
-                        <div style="display:flex; justify-content:space-between;"><span>${p.name}</span><span style="color:var(--success); font-weight:bold;">${month}: $${p.incs[month] || 0}</span></div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>${p.name}</span>
+                            ${isIncMode ? `<span style="color:var(--success); font-weight:bold;">$${p.incs[month]}</span>` : ''}
+                        </div>
                     </div>
                 </div>`).join('')}
             </div>`;
         }
-        document.getElementById('adminConfigList').innerHTML = html;
+        document.getElementById('adminConfigList').innerHTML = html || '<p style="text-align:center; padding:20px; color:#999;">本月尚未設定資料</p>';
+    }
+
+    function editModel(cat, name) {
+        hb();
+        const month = document.getElementById('adminMonth').value;
+        const p = products[cat].find(x => x.name === name);
+        document.getElementById('targetCat').value = cat;
+        document.getElementById('newModelName').value = p.name;
+        document.getElementById('newModelInc').value = p.incs[month] || 0;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function deleteCat(cat) { hb(); if(confirm(`刪除「${cat}」？`)) { delete products[cat]; refreshAll(); } }
-    function deleteModel(cat, idx) { hb(); if(confirm(`刪除此型號？`)) { products[cat].splice(idx, 1); refreshAll(); } }
+    function deleteModel(cat, name) { hb(); if(confirm(`刪除「${name}」？`)) { products[cat] = products[cat].filter(x => x.name !== name); refreshAll(); } }
 
     function saveRecord() {
         const model = document.getElementById('saleModel').value;
         if (!model) return alert("❌ 請選型號");
-        if (config.mode === 'receipt' && !inputValues.extra) return alert("❌ 請入收據");
         sales.unshift({ 
             id: Date.now(), date: document.getElementById('saleDate').value, cat: document.getElementById('saleCat').value, 
             model: model, qty: parseInt(inputValues.qty), extra: inputValues.extra || '0', 
@@ -321,26 +309,6 @@
         inputValues.extra = ''; inputValues.price = '0'; refreshAll(); alert("✅ 已儲存");
     }
 
-    function showSummary() {
-        const sD = document.getElementById('saleDate').value;
-        const filtered = sales.filter(s => s.date === sD);
-        let summary = {}, totalSales = 0, totalQty = 0, totalInc = 0;
-        filtered.forEach(s => {
-            if(!summary[s.model]) summary[s.model] = { q: 0, p: 0 };
-            summary[s.model].q += s.qty;
-            summary[s.model].p += s.price;
-            totalSales += s.price; totalQty += s.qty;
-            if(s.modeAtTime === 'incentive') totalInc += parseFloat(s.extra || 0);
-        });
-        let h = '';
-        for(let m in summary) h += `<tr><td>${m}</td><td style="text-align:center;">${summary[m].q}</td><td style="text-align:right;">$${summary[m].p}</td></tr>`;
-        h += `<tr style="font-weight:bold; background:#f8f9fa;"><td>總計</td><td style="text-align:center;">${totalQty}</td><td style="text-align:right;">$${totalSales}</td></tr>`;
-        document.getElementById('summaryTableBody').innerHTML = h;
-        document.getElementById('incentiveTotalArea').innerText = totalInc > 0 ? `💰 今日總 Incentive: $${totalInc}` : "";
-        document.getElementById('summaryOverlay').style.display = 'block';
-    }
-
-    function closeSummary() { document.getElementById('summaryOverlay').style.display = 'none'; }
     function toggleAdmin() { hb(); document.getElementById('mainUI').classList.toggle('hidden'); document.getElementById('adminSection').classList.toggle('hidden'); refreshAll(); }
     
     function renderSalesList() {
@@ -349,22 +317,32 @@
         let t = 0;
         document.getElementById('recordList').innerHTML = filtered.map(s => {
             t += s.price;
-            return `<div class="swipe-item">
-                <div class="swipe-action" onclick="deleteSale(${s.id})">刪除</div>
+            return `<div class="swipe-container">
+                <div class="action-btn action-del" onclick="deleteSale(${s.id})" style="right:0">刪除</div>
                 <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)">
                     <div style="display:flex; justify-content:space-between;"><strong>${s.model} (x${s.qty})</strong><strong style="color:var(--danger)">$${s.price}</strong></div>
-                    <div style="color:#666; font-size:14px;">${s.modeAtTime === 'incentive' ? '獎金' : '收據'}: ${s.extra}</div>
+                    <div style="color:#666; font-size:14px;">${s.modeAtTime==='incentive'?'獎金':'收據'}: ${s.extra}</div>
                 </div>
             </div>`;
-        }).join('') || '<div style="padding:30px; text-align:center; color:#888;">今日無紀錄</div>';
+        }).join('');
         document.getElementById('dayTotal').innerText = `總額: $${t}`;
     }
 
-    function deleteSale(id) { hb(); if(confirm("刪除？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
+    function deleteSale(id) { if(confirm("刪除？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
+
     let sX = 0, cur = null;
     function hTS(e) { sX = e.touches[0].clientX; cur = e.currentTarget; cur.style.transition = 'none'; }
-    function hTM(e) { let d = sX - e.touches[0].clientX; if (d > 0 && d < 110) cur.style.transform = `translateX(-${d}px)`; }
-    function hTE(e) { cur.style.transition = 'transform 0.3s ease'; if (sX - e.changedTouches[0].clientX > 55) cur.style.transform = `translateX(-90px)`; else cur.style.transform = `translateX(0px)`; }
+    function hTM(e) { 
+        let d = sX - e.touches[0].clientX; 
+        if (Math.abs(d) < 100) cur.style.transform = `translateX(${-d}px)`; 
+    }
+    function hTE(e) { 
+        let d = sX - e.changedTouches[0].clientX;
+        cur.style.transition = 'transform 0.3s ease';
+        if (d > 50) cur.style.transform = `translateX(-80px)`; 
+        else if (d < -50) cur.style.transform = `translateX(80px)`; 
+        else cur.style.transform = `translateX(0px)`;
+    }
 
     refreshAll();
 </script>
