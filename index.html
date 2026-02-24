@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <style>
-        :root { --primary: #0056b3; --success: #218838; --danger: #d93025; --info: #17a2b8; --dark: #000000; --warning: #ffc107; --dot: #007aff; }
+        :root { --primary: #0056b3; --success: #218838; --danger: #d93025; --info: #17a2b8; --dark: #000000; --warning: #ffc107; --orange: #fd7e14; }
         body { font-family: -apple-system, sans-serif; padding: 15px; background: #f0f2f5; margin: 0; color: var(--dark); user-select: none; -webkit-tap-highlight-color: transparent; }
         
         .header-area { margin-bottom: 10px; padding-right: 50px; position: relative; }
@@ -19,16 +19,17 @@
         .admin-trigger { position: absolute; top: 0; right: 0; font-size: 35px; padding: 5px; cursor: pointer; }
 
         .card { background: white; padding: 18px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        label { display: block; font-weight: 800; margin-bottom: 8px; font-size: 15px; color: #333; }
+        label { display: block; font-weight: 800; margin-bottom: 8px; font-size: 17px; color: #333; }
         
         select, input { width: 100%; height: 50px; border: 2px solid #888; border-radius: 10px; font-size: 18px; font-weight: bold; box-sizing: border-box; background: #fff; margin-bottom: 10px; }
 
-        /* 日期輸入框樣式，方便用戶點擊 */
-        #saleDate { background: #fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>') no-repeat scroll 95% 50%; }
+        /* 日期標記樣式 */
+        .date-marks { display: flex; flex-wrap: wrap; gap: 5px; margin-top: -5px; margin-bottom: 10px; padding: 0 5px; }
+        .mark-dot { background: var(--orange); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .mark-label { font-size: 12px; color: #666; width: 100%; margin-bottom: 5px; font-weight: bold; }
 
         .display-box { width: 100%; height: 55px; border: 2px solid #888; border-radius: 10px; font-size: 24px; font-weight: bold; display: flex; align-items: center; padding: 0 10px; box-sizing: border-box; background: #fff; margin-bottom: 15px;}
         .display-box.active { border-color: var(--primary); background: #eef6ff; box-shadow: 0 0 8px rgba(0,86,179,0.3); }
-        .display-box.readonly { background: #e9ecef; color: #495057; }
 
         .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #d1d5db; padding: 12px; border-radius: 15px; }
         .key { background: #fff; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; border-radius: 12px; box-shadow: 0 3px 0 #9ca3af; }
@@ -42,10 +43,6 @@
         .action-del { right: 0; background: var(--danger); }
         .action-edit { left: 0; background: var(--info); }
 
-        .sorting-mode .swipe-content { border-left: 8px solid var(--warning); padding-left: 5px; }
-        .sorting-handle { display: none; margin-right: 10px; color: #888; font-size: 20px; }
-        .sorting-mode .sorting-handle { display: inline-block; }
-
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; }
         .modal-card { background: white; width: 92%; max-width: 450px; border-radius: 20px; padding: 20px; box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
         .summary-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -53,9 +50,6 @@
 
         .hidden { display: none !important; }
         .admin-list-item { background: #fff; border: 1px solid #ccc; border-radius: 12px; margin-bottom: 15px; overflow: hidden; }
-
-        /* 備註提示：月曆點標記提示（僅作說明） */
-        .calendar-info { font-size: 11px; color: #666; margin-bottom: 5px; text-align: right; }
     </style>
 </head>
 <body>
@@ -68,12 +62,11 @@
     </div>
 
     <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label>📅 銷售日期</label>
-            <span class="calendar-info">● 有紀錄之日期</span>
-        </div>
+        <label>📅 銷售日期</label>
         <input type="date" id="saleDate" onchange="refreshAll()">
         
+        <div id="dateMarkArea" class="date-marks"></div>
+
         <div style="display: flex; gap: 10px;">
             <div style="flex:1;"><label>類別</label><select id="saleCat" onchange="onCategoryChange()"></select></div>
             <div style="flex:1;"><label>型號</label><select id="saleModel" onchange="onModelSelectChange()"></select></div>
@@ -87,7 +80,7 @@
             <div class="key" onclick="pressKey('1')">1</div><div class="key" onclick="pressKey('2')">2</div><div class="key" onclick="pressKey('3')">3</div>
             <div class="key" onclick="pressKey('4')">4</div><div class="key" onclick="pressKey('5')">5</div><div class="key" onclick="pressKey('6')">6</div>
             <div class="key" onclick="pressKey('7')">7</div><div class="key" onclick="pressKey('8')">8</div><div class="key" onclick="pressKey('9')">9</div>
-            <div class="key" onclick="pressKey('.')">.</div><div class="key" onclick="pressKey('0')">0</div><div class="key" onclick="hb(); pressKey('DEL')">DEL</div>
+            <div class="key" onclick="pressKey('.')">.</div><div class="key" onclick="pressKey('0')">0</div><div class="key action" onclick="hb(); pressKey('DEL')">DEL</div>
         </div>
         <button class="btn-save" onclick="hb(); saveRecord()">確認儲存</button>
     </div>
@@ -165,11 +158,30 @@
         document.getElementById('displayExtra').classList.toggle('readonly', getMode() === 'incentive');
     }
 
+    // V29: 更新月份入數標記
+    function updateDateMarks() {
+        const currentMonth = document.getElementById('saleDate').value.substring(0, 7);
+        const marksArea = document.getElementById('dateMarkArea');
+        
+        // 找出當月有紀錄的日期 (去重)
+        const recordedDays = [...new Set(sales
+            .filter(s => s.date.startsWith(currentMonth))
+            .map(s => parseInt(s.date.split('-')[2]))
+        )].sort((a, b) => a - b);
+
+        if (recordedDays.length > 0) {
+            marksArea.innerHTML = `<div class="mark-label">本月已入數日子:</div>` + 
+                recordedDays.map(day => `<div class="mark-dot">${day}</div>`).join('');
+        } else {
+            marksArea.innerHTML = `<div class="mark-label" style="color:#999;">本月暫無紀錄</div>`;
+        }
+    }
+
     function refreshAll() {
         updateMode();
         let p = getTargetProds();
         const cats = Object.keys(p);
-        const catHtml = '<option value="">-- 請選擇類別 --</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        const catHtml = '<option value="">-- 請先選擇類別 --</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
         
         const lastSaleCat = document.getElementById('saleCat').value;
         document.getElementById('saleCat').innerHTML = catHtml;
@@ -179,7 +191,7 @@
         document.getElementById('targetCat').innerHTML = catHtml;
         if(lastTargetCat && cats.includes(lastTargetCat)) document.getElementById('targetCat').value = lastTargetCat;
 
-        renderSalesList(); renderAdminConfigList();
+        renderSalesList(); renderAdminConfigList(); updateDateMarks();
         localStorage.setItem('prods_rec', JSON.stringify(prods_rec));
         localStorage.setItem('prods_inc', JSON.stringify(prods_inc));
         localStorage.setItem('exp_sales', JSON.stringify(sales));
@@ -243,17 +255,12 @@
     function pressKey(k) { let v = inputValues[activeInput]; if(k==='DEL'){ inputValues[activeInput] = v.length>1?v.slice(0,-1):(activeInput==='extra'?'':'0'); } else { if(activeInput!=='extra'&&v==='0'&&k!=='.')v=''; if(k==='.'&&v.includes('.'))return; inputValues[activeInput]=v+k; } updateDisplays(); }
     function updateDisplays() { document.getElementById('displayQty').innerText = inputValues.qty; document.getElementById('displayExtra').innerText = inputValues.extra || ''; document.getElementById('displayPrice').innerText = inputValues.price; }
     function toggleAdmin() { hb(); document.getElementById('mainUI').classList.toggle('hidden'); document.getElementById('adminSection').classList.toggle('hidden'); refreshAll(); }
-    
-    function addCategory() { 
-        const n = document.getElementById('newCatName').value.trim(); 
-        if(n){ getTargetProds()[n] = []; document.getElementById('newCatName').value=''; refreshAll(); } 
-        else { alert("⚠️ 請輸入類別名稱"); }
-    }
+    function addCategory() { const n = document.getElementById('newCatName').value.trim(); if(n){ getTargetProds()[n] = []; document.getElementById('newCatName').value=''; refreshAll(); } }
     
     function addModel() {
         const c = document.getElementById('targetCat').value;
         const n = document.getElementById('newModelName').value.trim();
-        if(!c || !n) return alert("⚠️ 請填妥類別及型號！");
+        if(!c || !n) return alert("請填寫完整");
         let p = getTargetProds();
         let item = p[c].find(x=>x.name===n);
         if(getMode()==='incentive'){
@@ -268,29 +275,14 @@
     function renderAdminConfigList() {
         let p = getTargetProds(); let h = ''; const m = document.getElementById('adminMonth').value;
         for (let cat in p) {
-            h += `<div class="admin-list-item">
-                <div class="swipe-container" data-type="cat" data-name="${cat}">
-                    <div class="action-btn action-del" onclick="deleteCat('${cat}')">刪除</div>
-                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="background:#eee; padding:10px; font-weight:bold; font-size:16px;">📁 ${cat}</div>
-                </div>
-                <div class="sortable-list" data-cat="${cat}">
-                ${p[cat].map((item, idx) => {
-                    if(getMode()==='incentive' && (item.incs===undefined || item.incs[m]===undefined)) return '';
-                    return `<div class="swipe-container" data-type="model" data-name="${item.name}">
-                        <div class="action-btn action-edit" onclick="editModel('${cat}', '${item.name}')">編輯</div>
-                        <div class="action-btn action-del" onclick="deleteModel('${cat}', '${item.name}')">刪除</div>
-                        <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="padding:12px;">
-                            <div style="display:flex; justify-content:space-between; width:100%;">
-                                <span><span class="sorting-handle">☰ </span>${item.name}</span>
-                                ${getMode()==='incentive' ? `<span style="color:var(--success); font-weight:bold;">$${item.incs[m]}</span>` : ''}
-                            </div>
-                        </div>
-                    </div>`;
-                }).join('')}
-                </div>
-            </div>`;
+            h += `<div class="admin-list-item"><div class="swipe-container" data-type="cat"><div class="action-btn action-del" onclick="deleteCat('${cat}')">刪除</div><div class="swipe-content" style="background:#eee; padding:10px; font-weight:bold;">📁 ${cat}</div></div><div class="sortable-list" data-cat="${cat}">`;
+            p[cat].forEach((item) => {
+                if(getMode()==='incentive' && (item.incs===undefined || item.incs[m]===undefined)) return;
+                h += `<div class="swipe-container" data-type="model" data-name="${item.name}"><div class="action-btn action-edit" onclick="editModel('${cat}', '${item.name}')">編輯</div><div class="action-btn action-del" onclick="deleteModel('${cat}', '${item.name}')">刪除</div><div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="padding:12px;"><div style="display:flex; justify-content:space-between;"><span><span class="sorting-handle">☰ </span>${item.name}</span>${getMode()==='incentive'?`<b>$${item.incs[m]}</b>`:''}</div></div></div>`;
+            });
+            h += `</div></div>`;
         }
-        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px; color:#999;">尚未設定資料。</p>';
+        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px; color:#999;">尚未設定資料</p>';
         if(isSortingMode) initSortable();
     }
 
@@ -307,20 +299,18 @@
 
     function toggleSortMode() { hb(); isSortingMode = !isSortingMode; document.getElementById('sortToggle').innerText = isSortingMode ? "🔓 鎖定模式" : "🔒 排序模式"; document.getElementById('adminConfigList').classList.toggle('sorting-mode', isSortingMode); renderAdminConfigList(); }
     function editModel(cat, name) { hb(); const month = document.getElementById('adminMonth').value; const p = getTargetProds()[cat].find(x => x.name === name); document.getElementById('targetCat').value = cat; document.getElementById('newModelName').value = p.name; if(getMode()==='incentive') document.getElementById('newModelInc').value = p.incs[month]; window.scrollTo(0,0); }
-    function deleteCat(cat) { hb(); if(confirm(`⚠️ 確定刪除類別「${cat}」及其所有產品？`)) { delete getTargetProds()[cat]; refreshAll(); } }
-    function deleteModel(cat, name) { hb(); if(confirm(`確定刪除型號「${name}」？`)) { getTargetProds()[cat] = getTargetProds()[cat].filter(x=>x.name!==name); refreshAll(); } }
-    
+    function deleteCat(cat) { hb(); if(confirm(`⚠️ 確定刪除類別「${cat}」？`)) { delete getTargetProds()[cat]; refreshAll(); } }
+    function deleteModel(cat, name) { hb(); if(confirm(`確定刪除「${name}」？`)) { getTargetProds()[cat] = getTargetProds()[cat].filter(x=>x.name!==name); refreshAll(); } }
     function renderSalesList() {
         const sD = document.getElementById('saleDate').value;
         const filtered = sales.filter(s => s.date === sD);
-        document.getElementById('recordList').innerHTML = filtered.map(s => `<div class="swipe-container"><div class="action-btn action-del" onclick="deleteSale(${s.id})">刪除</div><div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)"><b>${s.model} (x${s.qty})</b><span style="color:var(--danger)">$${s.price}</span></div></div>`).join('');
+        document.getElementById('recordList').innerHTML = filtered.map(s => `<div class="swipe-container"><div class="action-btn action-del" onclick="deleteSale(${s.id})" style="right:0">刪除</div><div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)"><b>${s.model} (x${s.qty})</b><span style="color:var(--danger)">$${s.price}</span></div></div>`).join('');
     }
-    
-    function deleteSale(id) { if(confirm("確定刪除此筆銷售紀錄？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
+    function deleteSale(id) { if(confirm("確定刪除？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
 
     let sX = 0, cur = null, type = "";
     function hTS(e) { if(isSortingMode) return; sX = e.touches[0].clientX; cur = e.currentTarget.parentElement; type = cur.getAttribute('data-type'); e.currentTarget.style.transition = 'none'; }
-    function hTM(e) { if(isSortingMode) return; let d = sX - e.touches[0].clientX; if (Math.abs(d) < 100) e.currentTarget.style.transform = `translateX(${-d}px)`; }
+    function hTM(e) { if(isSortingMode) return; let d = sX - e.touches[0].clientX; if (type === 'cat' && d < 0) return; if (Math.abs(d) < 100) e.currentTarget.style.transform = `translateX(${-d}px)`; }
     function hTE(e) { if(isSortingMode) return; let d = sX - e.changedTouches[0].clientX; e.currentTarget.style.transition = 'transform 0.3s ease'; if (d > 55) e.currentTarget.style.transform = `translateX(-80px)`; else if (d < -55 && type === 'model') e.currentTarget.style.transform = `translateX(80px)`; else e.currentTarget.style.transform = `translateX(0px)`; }
 
     refreshAll();
