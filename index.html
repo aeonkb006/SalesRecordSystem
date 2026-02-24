@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日銷售記錄系統 V28</title>
+    <title>每日銷售記錄系統 V29</title>
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <style>
-        :root { --primary: #0056b3; --success: #218838; --danger: #d93025; --info: #17a2b8; --dark: #000000; --warning: #ffc107; }
+        :root { --primary: #0056b3; --success: #218838; --danger: #d93025; --info: #17a2b8; --dark: #000000; --warning: #ffc107; --dot: #007aff; }
         body { font-family: -apple-system, sans-serif; padding: 15px; background: #f0f2f5; margin: 0; color: var(--dark); user-select: none; -webkit-tap-highlight-color: transparent; }
         
         .header-area { margin-bottom: 10px; padding-right: 50px; position: relative; }
@@ -22,6 +22,9 @@
         label { display: block; font-weight: 800; margin-bottom: 8px; font-size: 15px; color: #333; }
         
         select, input { width: 100%; height: 50px; border: 2px solid #888; border-radius: 10px; font-size: 18px; font-weight: bold; box-sizing: border-box; background: #fff; margin-bottom: 10px; }
+
+        /* 日期輸入框樣式，方便用戶點擊 */
+        #saleDate { background: #fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>') no-repeat scroll 95% 50%; }
 
         .display-box { width: 100%; height: 55px; border: 2px solid #888; border-radius: 10px; font-size: 24px; font-weight: bold; display: flex; align-items: center; padding: 0 10px; box-sizing: border-box; background: #fff; margin-bottom: 15px;}
         .display-box.active { border-color: var(--primary); background: #eef6ff; box-shadow: 0 0 8px rgba(0,86,179,0.3); }
@@ -50,20 +53,27 @@
 
         .hidden { display: none !important; }
         .admin-list-item { background: #fff; border: 1px solid #ccc; border-radius: 12px; margin-bottom: 15px; overflow: hidden; }
+
+        /* 備註提示：月曆點標記提示（僅作說明） */
+        .calendar-info { font-size: 11px; color: #666; margin-bottom: 5px; text-align: right; }
     </style>
 </head>
 <body>
 
 <div id="mainUI">
     <div class="header-area">
-        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">V28</span></h2>
+        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">V29</span></h2>
         <div class="disclaimer">此系統為實驗性質，如數據有所遺失開發者並不負責</div>
         <div class="admin-trigger" onclick="hb(); toggleAdmin()">⚙️</div>
     </div>
 
     <div class="card">
-        <label>📅 銷售日期</label>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label>📅 銷售日期</label>
+            <span class="calendar-info">● 有紀錄之日期</span>
+        </div>
         <input type="date" id="saleDate" onchange="refreshAll()">
+        
         <div style="display: flex; gap: 10px;">
             <div style="flex:1;"><label>類別</label><select id="saleCat" onchange="onCategoryChange()"></select></div>
             <div style="flex:1;"><label>型號</label><select id="saleModel" onchange="onModelSelectChange()"></select></div>
@@ -123,7 +133,7 @@
         <button class="btn-save" style="height:50px; font-size:18px;" onclick="addModel()">儲存產品</button>
         <hr>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3>📋 產品清單 (支援橫拉刪除類別)</h3>
+            <h3>📋 產品清單</h3>
             <button id="sortToggle" style="background:#666; color:white; border:none; padding:8px 12px; border-radius:8px;" onclick="toggleSortMode()">🔒 開啟排序</button>
         </div>
         <div id="adminConfigList"></div>
@@ -159,7 +169,7 @@
         updateMode();
         let p = getTargetProds();
         const cats = Object.keys(p);
-        const catHtml = '<option value="">-- 請先選擇類別 --</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        const catHtml = '<option value="">-- 請選擇類別 --</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
         
         const lastSaleCat = document.getElementById('saleCat').value;
         document.getElementById('saleCat').innerHTML = catHtml;
@@ -194,7 +204,6 @@
     function saveRecord() {
         const cat = document.getElementById('saleCat').value;
         const model = document.getElementById('saleModel').value;
-        // V28: 強制必須選擇類別
         if (!cat) return alert("⚠️ 請先選擇產品類別！");
         if (!model) return alert("⚠️ 請選擇型號！");
 
@@ -244,8 +253,7 @@
     function addModel() {
         const c = document.getElementById('targetCat').value;
         const n = document.getElementById('newModelName').value.trim();
-        if(!c) return alert("⚠️ 請先選擇類別！");
-        if(!n) return alert("⚠️ 請輸入型號名稱！");
+        if(!c || !n) return alert("⚠️ 請填妥類別及型號！");
         let p = getTargetProds();
         let item = p[c].find(x=>x.name===n);
         if(getMode()==='incentive'){
@@ -282,7 +290,7 @@
                 </div>
             </div>`;
         }
-        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px; color:#999;">尚未設定資料，請先新增類別。</p>';
+        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px; color:#999;">尚未設定資料。</p>';
         if(isSortingMode) initSortable();
     }
 
@@ -301,11 +309,13 @@
     function editModel(cat, name) { hb(); const month = document.getElementById('adminMonth').value; const p = getTargetProds()[cat].find(x => x.name === name); document.getElementById('targetCat').value = cat; document.getElementById('newModelName').value = p.name; if(getMode()==='incentive') document.getElementById('newModelInc').value = p.incs[month]; window.scrollTo(0,0); }
     function deleteCat(cat) { hb(); if(confirm(`⚠️ 確定刪除類別「${cat}」及其所有產品？`)) { delete getTargetProds()[cat]; refreshAll(); } }
     function deleteModel(cat, name) { hb(); if(confirm(`確定刪除型號「${name}」？`)) { getTargetProds()[cat] = getTargetProds()[cat].filter(x=>x.name!==name); refreshAll(); } }
+    
     function renderSalesList() {
         const sD = document.getElementById('saleDate').value;
         const filtered = sales.filter(s => s.date === sD);
         document.getElementById('recordList').innerHTML = filtered.map(s => `<div class="swipe-container"><div class="action-btn action-del" onclick="deleteSale(${s.id})">刪除</div><div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)"><b>${s.model} (x${s.qty})</b><span style="color:var(--danger)">$${s.price}</span></div></div>`).join('');
     }
+    
     function deleteSale(id) { if(confirm("確定刪除此筆銷售紀錄？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
 
     let sX = 0, cur = null, type = "";
