@@ -131,9 +131,6 @@
     let sales = JSON.parse(localStorage.getItem('exp_sales')) || [];
     let config = JSON.parse(localStorage.getItem('exp_config')) || { mode: 'receipt' };
     
-    // V33: 類別月份綁定追蹤 (不改動原有 prods_inc 結構，確保同事數據安全)
-    let catMonths = JSON.parse(localStorage.getItem('cat_months')) || {};
-
     let activeInput = 'price', inputValues = { qty: '1', extra: '', price: '0' };
     let isEditMode = false;
 
@@ -168,36 +165,21 @@
         const currentMonth = document.getElementById('saleDate').value.substring(0, 7);
         const mode = getMode();
         
-        // V33: 前台類別嚴格過濾 - 必須在該月有型號或被標記為該月活躍
+        // 前台過濾
         const cats = Object.keys(p).filter(cat => {
             if (mode === 'receipt') return true;
-            let hasMonth = (catMonths[cat] && catMonths[cat].includes(currentMonth));
-            let hasModelsInMonth = p[cat].some(item => item.incs && item.incs[currentMonth] !== undefined);
-            return hasMonth || hasModelsInMonth;
+            return p[cat].some(item => item.incs && item.incs[currentMonth] !== undefined);
         });
-
         const catHtml = '<option value="">-- 請先選擇類別 --</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
         const saleCatEl = document.getElementById('saleCat');
         const lastSaleCat = saleCatEl.value;
         saleCatEl.innerHTML = catHtml;
         if(lastSaleCat && cats.includes(lastSaleCat)) saleCatEl.value = lastSaleCat;
 
-        // 後台類別 - 顯示所有已建立的類別，方便新增型號
-        const allCats = Object.keys(p);
-        const targetCatSelect = document.getElementById('targetCat');
-        const lastTargetCat = targetCatSelect.value;
-        targetCatSelect.innerHTML = '<option value="">-- 選擇類別 --</option>' + allCats.map(c => `<option value="${c}">${c}</option>`).join('');
-        if(lastTargetCat && allCats.includes(lastTargetCat)) targetCatSelect.value = lastTargetCat;
-
         renderSalesList(); renderAdminConfigList(); updateDateMarks();
-        saveAllData();
-    }
-
-    function saveAllData() {
         localStorage.setItem('prods_rec', JSON.stringify(prods_rec));
         localStorage.setItem('prods_inc', JSON.stringify(prods_inc));
         localStorage.setItem('exp_sales', JSON.stringify(sales));
-        localStorage.setItem('cat_months', JSON.stringify(catMonths));
     }
 
     function onCategoryChange() {
@@ -230,37 +212,55 @@
     }
 
     function renderAdminConfigList() {
-        let p = getTargetProds(); let h = ''; const m = document.getElementById('adminMonth').value;
+        let p = getTargetProds(); 
+        let h = ''; 
+        const m = document.getElementById('adminMonth').value;
         const mode = getMode();
 
-        for (let cat in p) {
-            // V33: Incentive 模式月份過濾邏輯
-            let isCatInMonth = (mode === 'receipt') || (catMonths[cat] && catMonths[cat].includes(m));
-            let modelsInMonth = (mode === 'receipt') ? p[cat] : p[cat].filter(item => item.incs && item.incs[m] !== undefined);
-            
-            // 只有在 Receipt 模式，或者 Incentive 模式下該月活躍才顯示
-            if (mode === 'incentive' && !isCatInMonth && modelsInMonth.length === 0) continue; 
+        // 重新構建後台類別選單 (同步刪除邏輯)
+        const targetCatSelect = document.getElementById('targetCat');
+        const lastSelectedTarget = targetCatSelect.value;
+        let dropdownHtml = '<option value="">-- 選擇類別 --</option>';
 
-            h += `<div class="admin-list-item">
-                <div class="swipe-container" data-type="cat">
-                    <div class="action-btn action-del" onclick="deleteCat('${cat}')">刪除</div>
-                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="background:#eee; padding:10px; font-weight:bold;">📁 ${cat}</div>
-                </div>
-                <div class="sortable-list" data-cat="${cat}">`;
-            modelsInMonth.forEach((item) => {
-                h += `<div class="swipe-container" data-type="model" data-name="${item.name}">
-                    <div class="action-btn action-del" onclick="deleteModel('${cat}', '${item.name}')">刪除</div>
-                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="padding:15px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:18px;"><span class="sorting-handle">☰ </span>${item.name}</span>
-                            ${mode==='incentive'?`<b style="color:var(--success);">$${item.incs[m]}</b>`:''}
-                        </div>
+        for (let cat in p) {
+            let models = p[cat];
+            let isCategoryVisible = true;
+
+            if (mode === 'incentive') {
+                // 過濾出屬於該月份的型號，或者是剛新增的類別標記 (如有)
+                models = models.filter(item => (item.incs && item.incs[m] !== undefined) || item.name === "__month_marker__");
+                if (models.length === 0) isCategoryVisible = false;
+            }
+
+            if (isCategoryVisible) {
+                dropdownHtml += `<option value="${cat}">${cat}</option>`;
+                h += `<div class="admin-list-item">
+                    <div class="swipe-container" data-type="cat">
+                        <div class="action-btn action-del" onclick="deleteCat('${cat}')">刪除</div>
+                        <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="background:#eee; padding:10px; font-weight:bold;">📁 ${cat}</div>
                     </div>
-                </div>`;
-            });
-            h += `</div></div>`;
+                    <div class="sortable-list" data-cat="${cat}">`;
+                
+                models.forEach((item) => {
+                    if(item.name === "__month_marker__") return; // 隱藏標記位
+                    h += `<div class="swipe-container" data-type="model" data-name="${item.name}">
+                        <div class="action-btn action-del" onclick="deleteModel('${cat}', '${item.name}')">刪除</div>
+                        <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="padding:15px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:18px;"><span class="sorting-handle">☰ </span>${item.name}</span>
+                                ${mode==='incentive'?`<b style="color:var(--success);">$${item.incs[m]}</b>`:''}
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                h += `</div></div>`;
+            }
         }
-        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px;">本月無資料</p>';
+        
+        targetCatSelect.innerHTML = dropdownHtml;
+        if(lastSelectedTarget) targetCatSelect.value = lastSelectedTarget;
+
+        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px; color:#999;">本月尚未設定資料</p>';
         if(isEditMode) initSortable();
     }
 
@@ -280,70 +280,72 @@
                 const cat = evt.from.getAttribute('data-cat');
                 const [moved] = getTargetProds()[cat].splice(evt.oldIndex, 1);
                 getTargetProds()[cat].splice(evt.newIndex, 0, moved);
-                saveAllData(); hb();
+                refreshAll(); hb();
             }});
         });
     }
 
-    // V33: 修復月份獨立刪除邏輯
     function deleteCat(cat) { 
-        if(!isEditMode) return; hb(); 
-        const m = document.getElementById('adminMonth').value;
-        if(confirm(`確定刪除類別「${cat}」？`)) { 
+        if(!isEditMode) return; 
+        hb(); 
+        if(confirm(`⚠️ 確定從本月刪除類別「${cat}」？\n(其他月份數據將會保留)`)) { 
             if (getMode() === 'incentive') {
-                // 只從當前月份追蹤中移除
-                if(catMonths[cat]) catMonths[cat] = catMonths[cat].filter(x => x !== m);
-                // 同時移除該月份下該類別所有型號的獎金設定
-                if(prods_inc[cat]) prods_inc[cat].forEach(item => { if(item.incs) delete item.incs[m]; });
+                const m = document.getElementById('adminMonth').value;
+                getTargetProds()[cat].forEach(item => { if(item.incs) delete item.incs[m]; });
+                // 檢查是否完全清空
+                if (getTargetProds()[cat].every(item => Object.keys(item.incs || {}).length === 0)) {
+                    // 如果所有月份都冇數，先真正刪除 Key (選做)
+                }
             } else {
-                delete prods_rec[cat];
+                delete getTargetProds()[cat];
             }
-            refreshAll(); 
+            renderAdminConfigList(); 
         } 
     }
-    
+
     function deleteModel(cat, name) { 
-        if(!isEditMode) return; hb(); 
-        const m = document.getElementById('adminMonth').value;
-        if(confirm(`確定刪除「${name}」？`)) { 
+        if(!isEditMode) return; 
+        hb(); 
+        if(confirm(`確定刪除型號「${name}」？`)) { 
             if (getMode() === 'incentive') {
-                let item = prods_inc[cat].find(x => x.name === name);
+                const m = document.getElementById('adminMonth').value;
+                let item = getTargetProds()[cat].find(x => x.name === name);
                 if(item && item.incs) delete item.incs[m];
             } else {
-                prods_rec[cat] = prods_rec[cat].filter(x => x.name !== name);
+                getTargetProds()[cat] = getTargetProds()[cat].filter(x=>x.name!==name);
             }
-            refreshAll(); 
+            renderAdminConfigList(); 
         } 
     }
 
     function addCategory() { 
         const n = document.getElementById('newCatName').value.trim(); 
-        const m = document.getElementById('adminMonth').value;
         if(n) { 
-            let p = getTargetProds();
-            if(!p[n]) p[n] = []; 
+            if(!getTargetProds()[n]) getTargetProds()[n] = [];
             if(getMode() === 'incentive') {
-                if(!catMonths[n]) catMonths[n] = [];
-                if(!catMonths[n].includes(m)) catMonths[n].push(m);
+                const m = document.getElementById('adminMonth').value;
+                // 加入一個標記位型號，確保類別即使冇型號都能喺該月顯示
+                if (!getTargetProds()[n].find(x => x.name === "__month_marker__")) {
+                    getTargetProds()[n].push({name: "__month_marker__", incs: {[m]: 0}});
+                } else {
+                    getTargetProds()[n].find(x => x.name === "__month_marker__").incs[m] = 0;
+                }
             }
             document.getElementById('newCatName').value = ''; 
-            refreshAll(); 
+            renderAdminConfigList(); 
         } 
     }
 
     function addModel() {
         const c = document.getElementById('targetCat').value, n = document.getElementById('newModelName').value.trim();
-        const m = document.getElementById('adminMonth').value;
-        if(!c || !n) return alert("⚠️ 請選取類別及輸入型號");
+        if(!c || !n) return alert("請選類別並入名稱");
         let p = getTargetProds(); let item = p[c].find(x=>x.name===n);
         if(getMode()==='incentive'){
-            const inc = document.getElementById('newModelInc').value || '0';
+            const inc = document.getElementById('newModelInc').value || '0', m = document.getElementById('adminMonth').value;
             if(item){ if(!item.incs)item.incs={}; item.incs[m]=inc; } else { p[c].push({name:n, incs:{[m]:inc}}); }
-            // 確保該月標記存在
-            if(!catMonths[c]) catMonths[c] = [];
-            if(!catMonths[c].includes(m)) catMonths[c].push(m);
         } else { if(!item) p[c].push({name:n}); }
-        document.getElementById('newModelName').value = ""; document.getElementById('newModelInc').value = ""; refreshAll();
+        document.getElementById('newModelName').value = ""; document.getElementById('newModelInc').value = ""; 
+        renderAdminConfigList();
     }
 
     function renderSalesList() {
