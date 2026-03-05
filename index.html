@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日銷售記錄系統 V32</title>
+    <title>每日銷售記錄系統 V33</title>
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -34,19 +34,20 @@
         .key { background: #fff; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; border-radius: 12px; box-shadow: 0 3px 0 #9ca3af; }
         .key.action { background: #6b7280; color: white; }
 
-        button.btn-save { width: 100%; height: 70px; background: var(--success); color: white; border: none; border-radius: 15px; font-size: 24px; font-weight: 900; margin-top: 10px; }
+        button.btn-save { width: 100%; height: 75px; background: var(--success); color: white; border: none; border-radius: 15px; font-size: 24px; font-weight: 900; margin-top: 10px; }
 
         .swipe-container { position: relative; overflow: hidden; background: #fff; border-bottom: 1px solid #eee; touch-action: pan-y; }
         .swipe-content { display: flex; flex-direction: column; padding: 15px; background: white; position: relative; z-index: 2; transition: transform 0.3s ease; }
         .action-btn { position: absolute; top: 0; bottom: 0; width: 80px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; z-index: 1; }
         .action-del { right: 0; background: var(--danger); }
 
-        .sorting-handle { display: none; margin-right: 15px; color: #888; font-size: 32px; font-weight: bold; }
+        /* 排序與編輯模式樣式優化 */
+        .sorting-handle { display: none; margin-right: 20px; color: #555; font-size: 38px; font-weight: bold; line-height: 1; }
         .edit-active .sorting-handle { display: inline-block; }
-        .edit-active .swipe-content { border-left: 10px solid var(--orange); }
+        .edit-active .swipe-content { border-left: 12px solid var(--orange); }
 
-        .btn-edit-toggle { width: 100%; height: 70px; background: #6c757d; color: white; border: none; border-radius: 12px; font-size: 22px; font-weight: bold; margin-bottom: 20px; transition: 0.3s; }
-        .btn-edit-toggle.on { background: var(--orange); }
+        .btn-edit-toggle { width: 100%; height: 80px; background: #6c757d; color: white; border: none; border-radius: 15px; font-size: 24px; font-weight: bold; margin-bottom: 20px; transition: 0.3s; }
+        .btn-edit-toggle.on { background: var(--orange); box-shadow: 0 4px 15px rgba(253, 126, 20, 0.4); }
 
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; }
         .modal-card { background: white; width: 92%; max-width: 450px; border-radius: 20px; padding: 20px; box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
@@ -61,7 +62,7 @@
 
 <div id="mainUI">
     <div class="header-area">
-        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">V32</span></h2>
+        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">V33核心修復版</span></h2>
         <div class="disclaimer">此系統為實驗性質，如數據有所遺失開發者並不負責</div>
         <div class="admin-trigger" onclick="hb(); toggleAdmin()">⚙️</div>
     </div>
@@ -107,23 +108,23 @@
         <hr>
         <label>1. 新增類別</label>
         <input type="text" id="newCatName" placeholder="如：配件">
-        <button class="btn-save" style="height:40px; margin-bottom:15px; font-size:16px;" onclick="addCategory()">新增類別</button>
+        <button class="btn-save" style="height:45px; margin-bottom:15px; font-size:18px;" onclick="addCategory()">新增類別</button>
         
         <label>2. 設定產品 (類別維持)</label>
         <select id="targetCat"></select>
         <input type="text" id="newModelName" placeholder="型號名稱">
         <div id="adminIncWrapper" class="hidden"><input type="number" id="newModelInc" placeholder="獎金 ($)"></div>
-        <button class="btn-save" style="height:50px; font-size:18px;" onclick="addModel()">儲存產品</button>
+        <button class="btn-save" style="height:55px; font-size:18px;" onclick="addModel()">儲存產品</button>
         
         <hr>
-        <button id="editToggleBtn" class="btn-edit-toggle" onclick="toggleEditMode()">🔒 開啟編輯模式</button>
+        <button id="editToggleBtn" class="btn-edit-toggle" onclick="toggleEditMode()">🔒 鎖定中 (按此編輯)</button>
         
         <div id="adminConfigList"></div>
-        <button onclick="toggleAdmin()" style="width:100%; height:60px; background:#444; color:white; border-radius:12px; margin-top:20px;">返回銷售頁面</button>
+        <button onclick="toggleAdmin()" style="width:100%; height:70px; background:#444; color:white; border-radius:15px; font-size:22px; margin-top:20px;">返回銷售頁面</button>
     </div>
 </div>
 
-<div id="summaryOverlay" class="overlay"><div class="modal-card"><h3 id="modalTitle" style="text-align:center;"></h3><table class="summary-table"><tbody id="summaryTableBody"></tbody></table><div id="summaryFooter" style="margin-top:15px; text-align:right; border-top:2px solid #eee; padding-top:10px;"><div id="totalSalesArea" style="font-weight:bold;"></div><div id="totalIncArea" style="font-weight:900; color:var(--success); font-size:18px;"></div></div><button onclick="closeSummary()" style="width:100%; height:50px; background:#444; color:white; border:none; border-radius:10px; margin-top:15px;">關閉</button></div></div>
+<div id="summaryOverlay" class="overlay"><div class="modal-card"><h3 id="modalTitle" style="text-align:center;"></h3><table class="summary-table"><tbody id="summaryTableBody"></tbody></table><div id="summaryFooter" style="margin-top:15px; text-align:right; border-top:2px solid #eee; padding-top:10px;"><div id="totalSalesArea" style="font-weight:bold;"></div><div id="totalIncArea" style="font-weight:900; color:var(--success); font-size:18px;"></div></div><button onclick="closeSummary()" style="width:100%; height:55px; background:#444; color:white; border:none; border-radius:10px; margin-top:15px;">關閉</button></div></div>
 
 <script>
     let prods_rec = JSON.parse(localStorage.getItem('prods_rec')) || {};
@@ -165,7 +166,7 @@
         const currentMonth = document.getElementById('saleDate').value.substring(0, 7);
         const mode = getMode();
         
-        // 前台過濾
+        // 前端月份過濾
         const cats = Object.keys(p).filter(cat => {
             if (mode === 'receipt') return true;
             return p[cat].some(item => item.incs && item.incs[currentMonth] !== undefined);
@@ -218,13 +219,12 @@
         updateDisplays(); refreshAll(); hb();
     }
 
-    // --- 後台邏輯 (V32 修復過濾) ---
+    // --- V33 後台核心 (月度獨立刪除) ---
     function renderAdminConfigList() {
         let p = getTargetProds(); let h = ''; const m = document.getElementById('adminMonth').value;
         const mode = getMode();
 
         for (let cat in p) {
-            // V32: 類別月份嚴格過濾 (Incentive 模式下，如果該月冇型號就成個類別唔顯示)
             let models = p[cat];
             if (mode === 'incentive') {
                 models = models.filter(item => item.incs && item.incs[m] !== undefined);
@@ -234,31 +234,64 @@
             h += `<div class="admin-list-item">
                 <div class="swipe-container" data-type="cat">
                     <div class="action-btn action-del" onclick="deleteCat('${cat}')">刪除</div>
-                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="background:#eee; padding:10px; font-weight:bold;">📁 ${cat}</div>
+                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="background:#eee; padding:10px; font-weight:bold; font-size:16px;">📁 ${cat}</div>
                 </div>
                 <div class="sortable-list" data-cat="${cat}">`;
             models.forEach((item) => {
                 h += `<div class="swipe-container" data-type="model" data-name="${item.name}">
                     <div class="action-btn action-del" onclick="deleteModel('${cat}', '${item.name}')">刪除</div>
-                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="padding:15px;">
+                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="padding:20px 15px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:18px;"><span class="sorting-handle">☰ </span>${item.name}</span>
-                            ${mode==='incentive'?`<b style="color:var(--success);">$${item.incs[m]}</b>`:''}
+                            <span style="font-size:20px; font-weight:bold;"><span class="sorting-handle">☰ </span>${item.name}</span>
+                            ${mode==='incentive'?`<b style="color:var(--success); font-size:18px;">$${item.incs[m]}</b>`:''}
                         </div>
                     </div>
                 </div>`;
             });
             h += `</div></div>`;
         }
-        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px;">本月無資料</p>';
+        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px; color:#999;">此月份尚未設定資料</p>';
         if(isEditMode) initSortable();
+    }
+
+    function deleteModel(cat, name) {
+        if(!isEditMode) return;
+        hb();
+        if(confirm(`確定刪除「${name}」？`)) {
+            let p = getTargetProds();
+            if (getMode() === 'receipt') {
+                p[cat] = p[cat].filter(x => x.name !== name);
+            } else {
+                // V33 重要修改：只刪除當前月份的獎金掛鉤，不刪除原始數據
+                const m = document.getElementById('adminMonth').value;
+                const item = p[cat].find(x => x.name === name);
+                if (item && item.incs) delete item.incs[m];
+            }
+            refreshAll();
+        }
+    }
+
+    function deleteCat(cat) {
+        if(!isEditMode) return;
+        hb();
+        if(confirm(`確定刪除類別「${cat}」？`)) {
+            let p = getTargetProds();
+            if (getMode() === 'receipt') {
+                delete p[cat];
+            } else {
+                // V33 重要修改：移除該類別下所有型號與該月的獎金掛鉤
+                const m = document.getElementById('adminMonth').value;
+                p[cat].forEach(item => { if (item.incs) delete item.incs[m]; });
+            }
+            refreshAll();
+        }
     }
 
     function toggleEditMode() {
         hb(); isEditMode = !isEditMode;
         const btn = document.getElementById('editToggleBtn');
         const list = document.getElementById('adminConfigList');
-        btn.innerText = isEditMode ? "🔓 編輯模式已開啟 (可排序/刪除)" : "🔒 鎖定清單";
+        btn.innerText = isEditMode ? "🔓 編輯模式 (可排序/刪除)" : "🔒 鎖定中 (按此編輯)";
         btn.classList.toggle('on', isEditMode);
         list.classList.toggle('edit-active', isEditMode);
         renderAdminConfigList();
@@ -270,13 +303,12 @@
                 const cat = evt.from.getAttribute('data-cat');
                 const [moved] = getTargetProds()[cat].splice(evt.oldIndex, 1);
                 getTargetProds()[cat].splice(evt.newIndex, 0, moved);
-                refreshAll(); hb();
+                localStorage.setItem('prods_rec', JSON.stringify(prods_rec));
+                localStorage.setItem('prods_inc', JSON.stringify(prods_inc));
+                hb();
             }});
         });
     }
-
-    function deleteCat(cat) { if(!isEditMode) return; hb(); if(confirm(`確定刪除類別「${cat}」？`)) { delete getTargetProds()[cat]; refreshAll(); } }
-    function deleteModel(cat, name) { if(!isEditMode) return; hb(); if(confirm(`確定刪除「${name}」？`)) { getTargetProds()[cat] = getTargetProds()[cat].filter(x=>x.name!==name); refreshAll(); } }
 
     function addCategory() { const n = document.getElementById('newCatName').value.trim(); if(n) { getTargetProds()[n] = []; document.getElementById('newCatName').value = ''; refreshAll(); } }
     function addModel() {
@@ -326,11 +358,11 @@
     function pressKey(k) { if (getMode() === 'incentive' && activeInput === 'extra') return; let v = inputValues[activeInput]; if(k==='DEL'){ inputValues[activeInput] = v.length>1?v.slice(0,-1):(activeInput==='extra'?'':'0'); } else { if(activeInput!=='extra'&&v==='0'&&k!=='.')v=''; if(k==='.'&&v.includes('.'))return; inputValues[activeInput]=v+k; } updateDisplays(); }
     function updateDisplays() { document.getElementById('displayQty').innerText = inputValues.qty; document.getElementById('displayExtra').innerText = inputValues.extra || ''; document.getElementById('displayPrice').innerText = inputValues.price; }
 
-    // 滑動邏輯 V32 (嚴格鎖定)
-    let sX = 0, cur = null, swipeType = "";
+    // V33 嚴格滑動邏輯 (徹底解決誤觸與自動鎖定)
+    let sX = 0, cur = null;
     function hTS(e) { 
         const isAdmin = document.getElementById('adminSection').contains(e.currentTarget);
-        if(isAdmin && !isEditMode) return; 
+        if(isAdmin && !isEditMode) return; // 鎖定狀態下完全不記錄觸碰起始
         sX = e.touches[0].clientX; cur = e.currentTarget.parentElement; e.currentTarget.style.transition = 'none'; 
     }
     function hTM(e) { 
@@ -338,7 +370,7 @@
         const isAdmin = document.getElementById('adminSection').contains(cur);
         if(isAdmin && !isEditMode) return;
         let d = sX - e.touches[0].clientX; 
-        if (Math.abs(d) < 100) e.currentTarget.style.transform = `translateX(${-d}px)`; 
+        if (d > 0 && d < 100) e.currentTarget.style.transform = `translateX(${-d}px)`; 
     }
     function hTE(e) { 
         if(!cur) return;
