@@ -41,12 +41,11 @@
         .action-btn { position: absolute; top: 0; bottom: 0; width: 80px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; z-index: 1; }
         .action-del { right: 0; background: var(--danger); }
 
-        /* 編輯模式樣式 */
-        .sorting-handle { display: none; margin-right: 20px; color: #888; font-size: 38px; font-weight: bold; }
+        .sorting-handle { display: none; margin-right: 15px; color: #888; font-size: 32px; font-weight: bold; }
         .edit-active .sorting-handle { display: inline-block; }
-        .edit-active .swipe-content { border-left: 12px solid var(--orange); }
+        .edit-active .swipe-content { border-left: 10px solid var(--orange); }
 
-        .btn-edit-toggle { width: 100%; height: 75px; background: #6c757d; color: white; border: none; border-radius: 15px; font-size: 24px; font-weight: bold; margin-bottom: 20px; transition: 0.3s; }
+        .btn-edit-toggle { width: 100%; height: 70px; background: #6c757d; color: white; border: none; border-radius: 12px; font-size: 22px; font-weight: bold; margin-bottom: 20px; transition: 0.3s; }
         .btn-edit-toggle.on { background: var(--orange); }
 
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; }
@@ -56,7 +55,6 @@
 
         .hidden { display: none !important; }
         .receipt-tag { font-size: 12px; color: #666; margin-top: 2px; display: block; }
-        .admin-list-item { background: #fff; border: 1px solid #ccc; border-radius: 12px; margin-bottom: 15px; overflow: hidden; }
     </style>
 </head>
 <body>
@@ -109,13 +107,13 @@
         <hr>
         <label>1. 新增類別</label>
         <input type="text" id="newCatName" placeholder="如：配件">
-        <button class="btn-save" style="height:45px; margin-bottom:15px; font-size:16px;" onclick="addCategory()">新增類別</button>
+        <button class="btn-save" style="height:40px; margin-bottom:15px; font-size:16px;" onclick="addCategory()">新增類別</button>
         
         <label>2. 設定產品 (類別維持)</label>
         <select id="targetCat"></select>
         <input type="text" id="newModelName" placeholder="型號名稱">
         <div id="adminIncWrapper" class="hidden"><input type="number" id="newModelInc" placeholder="獎金 ($)"></div>
-        <button class="btn-save" style="height:55px; font-size:18px;" onclick="addModel()">儲存產品</button>
+        <button class="btn-save" style="height:50px; font-size:18px;" onclick="addModel()">儲存產品</button>
         
         <hr>
         <button id="editToggleBtn" class="btn-edit-toggle" onclick="toggleEditMode()">🔒 開啟編輯模式</button>
@@ -133,6 +131,9 @@
     let sales = JSON.parse(localStorage.getItem('exp_sales')) || [];
     let config = JSON.parse(localStorage.getItem('exp_config')) || { mode: 'receipt' };
     
+    // V33: 類別月份綁定追蹤 (不改動原有 prods_inc 結構，確保同事數據安全)
+    let catMonths = JSON.parse(localStorage.getItem('cat_months')) || {};
+
     let activeInput = 'price', inputValues = { qty: '1', extra: '', price: '0' };
     let isEditMode = false;
 
@@ -167,18 +168,21 @@
         const currentMonth = document.getElementById('saleDate').value.substring(0, 7);
         const mode = getMode();
         
-        // 前台類別過濾 (嚴格掛鉤)
+        // V33: 前台類別嚴格過濾 - 必須在該月有型號或被標記為該月活躍
         const cats = Object.keys(p).filter(cat => {
             if (mode === 'receipt') return true;
-            return p[cat].some(item => item.incs && item.incs[currentMonth] !== undefined);
+            let hasMonth = (catMonths[cat] && catMonths[cat].includes(currentMonth));
+            let hasModelsInMonth = p[cat].some(item => item.incs && item.incs[currentMonth] !== undefined);
+            return hasMonth || hasModelsInMonth;
         });
+
         const catHtml = '<option value="">-- 請先選擇類別 --</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
         const saleCatEl = document.getElementById('saleCat');
         const lastSaleCat = saleCatEl.value;
         saleCatEl.innerHTML = catHtml;
         if(lastSaleCat && cats.includes(lastSaleCat)) saleCatEl.value = lastSaleCat;
 
-        // 後台類別 (即時同步)
+        // 後台類別 - 顯示所有已建立的類別，方便新增型號
         const allCats = Object.keys(p);
         const targetCatSelect = document.getElementById('targetCat');
         const lastTargetCat = targetCatSelect.value;
@@ -186,13 +190,14 @@
         if(lastTargetCat && allCats.includes(lastTargetCat)) targetCatSelect.value = lastTargetCat;
 
         renderSalesList(); renderAdminConfigList(); updateDateMarks();
-        saveData();
+        saveAllData();
     }
 
-    function saveData() {
+    function saveAllData() {
         localStorage.setItem('prods_rec', JSON.stringify(prods_rec));
         localStorage.setItem('prods_inc', JSON.stringify(prods_inc));
         localStorage.setItem('exp_sales', JSON.stringify(sales));
+        localStorage.setItem('cat_months', JSON.stringify(catMonths));
     }
 
     function onCategoryChange() {
@@ -215,7 +220,8 @@
     }
 
     function saveRecord() {
-        const cat = document.getElementById('saleCat').value, model = document.getElementById('saleModel').value;
+        const cat = document.getElementById('saleCat').value;
+        const model = document.getElementById('saleModel').value;
         if (!cat || !model) return alert("⚠️ 請選取類別及型號！");
         sales.unshift({ id: Date.now(), date: document.getElementById('saleDate').value, cat: cat, model: model, qty: parseInt(inputValues.qty), extra: inputValues.extra || '0', price: parseFloat(inputValues.price), modeAtTime: config.mode });
         document.getElementById('saleCat').value = ""; document.getElementById('saleModel').innerHTML = '<option value="">-- 型號 --</option>';
@@ -223,28 +229,25 @@
         updateDisplays(); refreshAll(); hb();
     }
 
-    // --- 後台核心修復 ---
     function renderAdminConfigList() {
         let p = getTargetProds(); let h = ''; const m = document.getElementById('adminMonth').value;
         const mode = getMode();
 
         for (let cat in p) {
-            let models = p[cat];
-            // Incentive 模式：只顯示該月份有數據的型號
-            if (mode === 'incentive') {
-                models = models.filter(item => item.incs && item.incs[m] !== undefined);
-                // 修復：如果該類別是剛建立但沒型號，在該月份也要顯示標題 (解決 Point 2)
-                // 邏輯：如果類別在 object 存在但內容為空，在該 session 顯示
-                if (p[cat].length > 0 && models.length === 0) continue; 
-            }
+            // V33: Incentive 模式月份過濾邏輯
+            let isCatInMonth = (mode === 'receipt') || (catMonths[cat] && catMonths[cat].includes(m));
+            let modelsInMonth = (mode === 'receipt') ? p[cat] : p[cat].filter(item => item.incs && item.incs[m] !== undefined);
+            
+            // 只有在 Receipt 模式，或者 Incentive 模式下該月活躍才顯示
+            if (mode === 'incentive' && !isCatInMonth && modelsInMonth.length === 0) continue; 
 
             h += `<div class="admin-list-item">
                 <div class="swipe-container" data-type="cat">
                     <div class="action-btn action-del" onclick="deleteCat('${cat}')">刪除</div>
-                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="background:#eee; padding:12px; font-weight:bold; font-size:17px;">📁 ${cat}</div>
+                    <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="background:#eee; padding:10px; font-weight:bold;">📁 ${cat}</div>
                 </div>
                 <div class="sortable-list" data-cat="${cat}">`;
-            models.forEach((item) => {
+            modelsInMonth.forEach((item) => {
                 h += `<div class="swipe-container" data-type="model" data-name="${item.name}">
                     <div class="action-btn action-del" onclick="deleteModel('${cat}', '${item.name}')">刪除</div>
                     <div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)" style="padding:15px;">
@@ -257,7 +260,7 @@
             });
             h += `</div></div>`;
         }
-        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px; color:#999;">本月份無設定資料</p>';
+        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px;">本月無資料</p>';
         if(isEditMode) initSortable();
     }
 
@@ -277,55 +280,72 @@
                 const cat = evt.from.getAttribute('data-cat');
                 const [moved] = getTargetProds()[cat].splice(evt.oldIndex, 1);
                 getTargetProds()[cat].splice(evt.newIndex, 0, moved);
-                saveData(); hb();
+                saveAllData(); hb();
             }});
         });
     }
 
-    // 修復 Point 1: 刪除類別與型號的月份掛鉤
+    // V33: 修復月份獨立刪除邏輯
     function deleteCat(cat) { 
         if(!isEditMode) return; hb(); 
-        if(confirm(`⚠️ 確定刪除「${cat}」？\n(收據模式會永久刪除，獎金模式僅刪除本月掛鉤)`)) { 
-            if (getMode() === 'receipt') {
-                delete prods_rec[cat];
+        const m = document.getElementById('adminMonth').value;
+        if(confirm(`確定刪除類別「${cat}」？`)) { 
+            if (getMode() === 'incentive') {
+                // 只從當前月份追蹤中移除
+                if(catMonths[cat]) catMonths[cat] = catMonths[cat].filter(x => x !== m);
+                // 同時移除該月份下該類別所有型號的獎金設定
+                if(prods_inc[cat]) prods_inc[cat].forEach(item => { if(item.incs) delete item.incs[m]; });
             } else {
-                const m = document.getElementById('adminMonth').value;
-                prods_inc[cat].forEach(item => { if(item.incs) delete item.incs[m]; });
-                // 如果該類別所有型號都沒數據了，且是空的，則徹底移除
-                if (prods_inc[cat].length === 0) delete prods_inc[cat];
+                delete prods_rec[cat];
             }
             refreshAll(); 
         } 
     }
-
+    
     function deleteModel(cat, name) { 
         if(!isEditMode) return; hb(); 
-        if(confirm(`確定刪除型號「${name}」？`)) { 
-            let p = getTargetProds();
-            if (getMode() === 'receipt') {
-                p[cat] = p[cat].filter(x=>x.name!==name);
-            } else {
-                const m = document.getElementById('adminMonth').value;
-                let item = p[cat].find(x=>x.name===name);
+        const m = document.getElementById('adminMonth').value;
+        if(confirm(`確定刪除「${name}」？`)) { 
+            if (getMode() === 'incentive') {
+                let item = prods_inc[cat].find(x => x.name === name);
                 if(item && item.incs) delete item.incs[m];
+            } else {
+                prods_rec[cat] = prods_rec[cat].filter(x => x.name !== name);
             }
             refreshAll(); 
         } 
     }
 
-    function addCategory() { const n = document.getElementById('newCatName').value.trim(); if(n) { getTargetProds()[n] = []; document.getElementById('newCatName').value = ''; refreshAll(); } }
+    function addCategory() { 
+        const n = document.getElementById('newCatName').value.trim(); 
+        const m = document.getElementById('adminMonth').value;
+        if(n) { 
+            let p = getTargetProds();
+            if(!p[n]) p[n] = []; 
+            if(getMode() === 'incentive') {
+                if(!catMonths[n]) catMonths[n] = [];
+                if(!catMonths[n].includes(m)) catMonths[n].push(m);
+            }
+            document.getElementById('newCatName').value = ''; 
+            refreshAll(); 
+        } 
+    }
+
     function addModel() {
         const c = document.getElementById('targetCat').value, n = document.getElementById('newModelName').value.trim();
-        if(!c || !n) return alert("⚠️ 請選類別並入型號");
+        const m = document.getElementById('adminMonth').value;
+        if(!c || !n) return alert("⚠️ 請選取類別及輸入型號");
         let p = getTargetProds(); let item = p[c].find(x=>x.name===n);
         if(getMode()==='incentive'){
-            const inc = document.getElementById('newModelInc').value || '0', m = document.getElementById('adminMonth').value;
+            const inc = document.getElementById('newModelInc').value || '0';
             if(item){ if(!item.incs)item.incs={}; item.incs[m]=inc; } else { p[c].push({name:n, incs:{[m]:inc}}); }
+            // 確保該月標記存在
+            if(!catMonths[c]) catMonths[c] = [];
+            if(!catMonths[c].includes(m)) catMonths[c].push(m);
         } else { if(!item) p[c].push({name:n}); }
         document.getElementById('newModelName').value = ""; document.getElementById('newModelInc').value = ""; refreshAll();
     }
 
-    // --- 其他渲染邏輯 ---
     function renderSalesList() {
         const sD = document.getElementById('saleDate').value;
         const filtered = sales.filter(s => s.date === sD);
@@ -335,7 +355,7 @@
                     <div style="display:flex; justify-content:space-between; align-items:center;"><div><b>${s.model} (x${s.qty})</b>${receiptTag}</div><span style="color:var(--danger); font-weight:bold;">$${s.price}</span></div></div></div>`;
         }).join('');
     }
-    function deleteSale(id) { hb(); if(confirm("確定刪除紀錄？")) { sales = sales.filter(s => s.id !== id); saveData(); renderSalesList(); updateDateMarks(); } }
+    function deleteSale(id) { hb(); if(confirm("確定刪除此筆紀錄？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
     function updateDateMarks() {
         const currentMonth = document.getElementById('saleDate').value.substring(0, 7);
         const recordedDays = [...new Set(sales.filter(s => s.date.startsWith(currentMonth)).map(s => parseInt(s.date.split('-')[2])))].sort((a, b) => a - b);
@@ -362,7 +382,6 @@
     function pressKey(k) { if (getMode() === 'incentive' && activeInput === 'extra') return; let v = inputValues[activeInput]; if(k==='DEL'){ inputValues[activeInput] = v.length>1?v.slice(0,-1):(activeInput==='extra'?'':'0'); } else { if(activeInput!=='extra'&&v==='0'&&k!=='.')v=''; if(k==='.'&&v.includes('.'))return; inputValues[activeInput]=v+k; } updateDisplays(); }
     function updateDisplays() { document.getElementById('displayQty').innerText = inputValues.qty; document.getElementById('displayExtra').innerText = inputValues.extra || ''; document.getElementById('displayPrice').innerText = inputValues.price; }
 
-    // 滑動邏輯 (徹底鎖定)
     let sX = 0, cur = null;
     function hTS(e) { 
         const isAdmin = document.getElementById('adminSection').contains(e.currentTarget);
@@ -374,17 +393,14 @@
         const isAdmin = document.getElementById('adminSection').contains(cur);
         if(isAdmin && !isEditMode) return;
         let d = sX - e.touches[0].clientX; 
-        if (d > 0 && d < 100) e.currentTarget.style.transform = `translateX(${-d}px)`; 
+        if (Math.abs(d) < 100) e.currentTarget.style.transform = `translateX(${-d}px)`; 
     }
     function hTE(e) { 
         if(!cur) return;
         e.currentTarget.style.transition = 'transform 0.3s ease';
         let d = sX - e.changedTouches[0].clientX;
-        if (d > 55) {
-            const isAdmin = document.getElementById('adminSection').contains(cur);
-            if(isAdmin && !isEditMode) e.currentTarget.style.transform = `translateX(0px)`;
-            else e.currentTarget.style.transform = `translateX(-80px)`;
-        } else { e.currentTarget.style.transform = `translateX(0px)`; }
+        if (d > 55) e.currentTarget.style.transform = `translateX(-80px)`; 
+        else e.currentTarget.style.transform = `translateX(0px)`;
         cur = null;
     }
 
