@@ -45,7 +45,7 @@
         .edit-active .sorting-handle { display: inline-block; }
         .edit-active .swipe-content { border-left: 10px solid var(--orange); }
 
-        .btn-edit-toggle { width: 100%; height: 75px; background: #6c757d; color: white; border: none; border-radius: 12px; font-size: 22px; font-weight: bold; margin-bottom: 20px; transition: 0.3s; }
+        .btn-edit-toggle { width: 100%; height: 70px; background: #6c757d; color: white; border: none; border-radius: 12px; font-size: 22px; font-weight: bold; margin-bottom: 20px; transition: 0.3s; }
         .btn-edit-toggle.on { background: var(--orange); }
 
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; }
@@ -55,13 +55,14 @@
 
         .hidden { display: none !important; }
         .receipt-tag { font-size: 12px; color: #666; margin-top: 2px; display: block; }
+        .admin-list-item { background: #fff; border: 1px solid #ccc; border-radius: 12px; margin-bottom: 15px; overflow: hidden; }
     </style>
 </head>
 <body>
 
 <div id="mainUI">
     <div class="header-area">
-        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">V33</span></h2>
+        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">Version V33</span></h2>
         <div class="disclaimer">此系統為實驗性質，如數據有所遺失開發者並不負責</div>
         <div class="admin-trigger" onclick="hb(); toggleAdmin()">⚙️</div>
     </div>
@@ -99,21 +100,21 @@
 <div id="adminSection" class="hidden">
     <div class="card">
         <h2>⚙️ 管理後台</h2>
-        <select id="modeSelect" onchange="updateMode(); refreshAll();">
+        <select id="modeSelect" onchange="updateMode(); refreshAll();" style="margin-bottom:15px;">
             <option value="receipt">收據編號模式</option>
             <option value="incentive">激勵獎金模式</option>
         </select>
-        <div id="adminMonthArea"><label>管理月份</label><input type="month" id="adminMonth" onchange="renderAdminConfigList(); refreshDropdowns();"></div>
+        <div id="adminMonthArea"><label>管理月份</label><input type="month" id="adminMonth" onchange="refreshAll();"></div>
         <hr>
         <label>1. 新增類別</label>
-        <input type="text" id="newCatName" placeholder="如：配件">
-        <button class="btn-save" style="height:45px; margin-bottom:15px; font-size:16px;" onclick="addCategory()">新增類別</button>
+        <input type="text" id="newCatName" placeholder="輸入類別後按新增">
+        <button class="btn-save" style="height:45px; margin-bottom:15px; font-size:16px;" onclick="addCategory()">確定新增類別</button>
         
-        <label>2. 設定產品 (類別維持)</label>
+        <label>2. 設定型號 (必須先選類別)</label>
         <select id="targetCat"></select>
         <input type="text" id="newModelName" placeholder="型號名稱">
         <div id="adminIncWrapper" class="hidden"><input type="number" id="newModelInc" placeholder="獎金 ($)"></div>
-        <button class="btn-save" style="height:55px; font-size:18px;" onclick="addModel()">儲存產品</button>
+        <button class="btn-save" style="height:50px; font-size:18px;" onclick="addModel()">儲存產品</button>
         
         <hr>
         <button id="editToggleBtn" class="btn-edit-toggle" onclick="toggleEditMode()">🔒 開啟編輯模式</button>
@@ -149,6 +150,7 @@
         document.getElementById('dynamicLabel').innerText = (mode === 'receipt') ? '收據編號' : 'Incentive ($)';
         document.getElementById('adminIncWrapper').classList.toggle('hidden', mode !== 'incentive');
         document.getElementById('adminMonthArea').classList.toggle('hidden', mode !== 'incentive');
+        
         const extraBox = document.getElementById('displayExtra');
         if (mode === 'incentive') {
             extraBox.classList.add('disabled');
@@ -159,35 +161,35 @@
         }
     }
 
-    function refreshDropdowns() {
-        const p = getTargetProds();
-        const mode = getMode();
-        const saleDateMonth = document.getElementById('saleDate').value.substring(0, 7);
-
-        // 前台類別：Incentive 模式下嚴格過濾月份
-        const saleCats = Object.keys(p).filter(cat => {
-            if (mode === 'receipt') return true;
-            return p[cat].some(item => item.incs && item.incs[saleDateMonth] !== undefined);
-        });
-        const saleCatEl = document.getElementById('saleCat');
-        const lastSaleCat = saleCatEl.value;
-        saleCatEl.innerHTML = '<option value="">-- 請先選擇類別 --</option>' + saleCats.map(c => `<option value="${c}">${c}</option>`).join('');
-        if(lastSaleCat && saleCats.includes(lastSaleCat)) saleCatEl.value = lastSaleCat;
-
-        // 後台類別：顯示所有類別（方便新增型號）
-        const allCats = Object.keys(p);
-        const targetCatSelect = document.getElementById('targetCat');
-        const lastTargetCat = targetCatSelect.value;
-        targetCatSelect.innerHTML = '<option value="">-- 選擇類別 --</option>' + allCats.map(c => `<option value="${c}">${c}</option>`).join('');
-        if(lastTargetCat && allCats.includes(lastTargetCat)) targetCatSelect.value = lastTargetCat;
-    }
-
     function refreshAll() {
         updateMode();
-        refreshDropdowns();
-        renderSalesList();
-        renderAdminConfigList();
+        let p = getTargetProds();
+        const currentMonth = (getMode() === 'receipt') ? null : document.getElementById('saleDate').value.substring(0, 7);
+        const adminMonth = document.getElementById('adminMonth').value;
+        const mode = getMode();
+        
+        // 前台選單過濾 (嚴格掛鉤)
+        let displayCats = Object.keys(p);
+        if (mode === 'incentive') {
+            displayCats = displayCats.filter(cat => p[cat].some(m => m.incs && m.incs[currentMonth] !== undefined));
+        }
+        
+        const saleCatEl = document.getElementById('saleCat');
+        const lastSaleCat = saleCatEl.value;
+        saleCatEl.innerHTML = '<option value="">-- 請先選擇類別 --</option>' + displayCats.map(c => `<option value="${c}">${c}</option>`).join('');
+        if(lastSaleCat && displayCats.includes(lastSaleCat)) saleCatEl.value = lastSaleCat;
+
+        // 後台選單 (始終顯示所有類別方便新增)
+        const targetCatSelect = document.getElementById('targetCat');
+        const lastTargetCat = targetCatSelect.value;
+        const allCats = Object.keys(p);
+        targetCatSelect.innerHTML = '<option value="">-- 選擇類別 --</option>' + allCats.map(c => `<option value="${c}">${c}</option>`).join('');
+        if(lastTargetCat && allCats.includes(lastTargetCat)) targetCatSelect.value = lastTargetCat;
+
+        renderSalesList(); 
+        renderAdminConfigList(); 
         updateDateMarks();
+        
         localStorage.setItem('prods_rec', JSON.stringify(prods_rec));
         localStorage.setItem('prods_inc', JSON.stringify(prods_inc));
         localStorage.setItem('exp_sales', JSON.stringify(sales));
@@ -197,7 +199,9 @@
         const cat = document.getElementById('saleCat').value;
         const currentMonth = document.getElementById('saleDate').value.substring(0, 7);
         let models = getTargetProds()[cat] || [];
-        if (getMode() === 'incentive') models = models.filter(m => m.incs && m.incs[currentMonth] !== undefined);
+        if (getMode() === 'incentive') {
+            models = models.filter(m => m.incs && m.incs[currentMonth] !== undefined);
+        }
         document.getElementById('saleModel').innerHTML = '<option value="">-- 型號 --</option>' + models.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
     }
 
@@ -222,19 +226,17 @@
         updateDisplays(); refreshAll(); hb();
     }
 
-    // --- 後台管理邏輯 (V33 月份掛鉤修復) ---
     function renderAdminConfigList() {
-        let p = getTargetProds(); let h = ''; const m = document.getElementById('adminMonth').value;
+        let p = getTargetProds(); let h = ''; 
+        const m = document.getElementById('adminMonth').value;
         const mode = getMode();
 
         for (let cat in p) {
             let models = p[cat];
             if (mode === 'incentive') {
-                // 僅顯示該月份有獎金紀錄的型號
                 models = models.filter(item => item.incs && item.incs[m] !== undefined);
             }
-            
-            // Incentive 模式下，如果類別內冇型號屬於該月，就唔顯示類別
+            // Incentive 模式下，如果該月冇資料就成個類別唔出
             if (mode === 'incentive' && models.length === 0) continue; 
 
             h += `<div class="admin-list-item">
@@ -256,7 +258,7 @@
             });
             h += `</div></div>`;
         }
-        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px;">本月無資料</p>';
+        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px; color:#999;">本月尚未輸入任何產品</p>';
         if(isEditMode) initSortable();
     }
 
@@ -281,16 +283,37 @@
         });
     }
 
-    // V33: 刪除邏輯改為「月份獨立」
+    function addCategory() { 
+        const n = document.getElementById('newCatName').value.trim(); 
+        if(n) { 
+            let p = getTargetProds();
+            if(!p[n]) p[n] = []; 
+            document.getElementById('newCatName').value = ''; 
+            refreshAll(); // 確保 targetCat dropdown 即時更新
+        } 
+    }
+
+    function addModel() {
+        const c = document.getElementById('targetCat').value, n = document.getElementById('newModelName').value.trim();
+        if(!c || !n) return alert("請填寫完整");
+        let p = getTargetProds(); let item = p[c].find(x=>x.name===n);
+        if(getMode()==='incentive'){
+            const inc = document.getElementById('newModelInc').value || '0', m = document.getElementById('adminMonth').value;
+            if(item){ if(!item.incs)item.incs={}; item.incs[m]=inc; } else { p[c].push({name:n, incs:{[m]:inc}}); }
+        } else { if(!item) p[c].push({name:n}); }
+        document.getElementById('newModelName').value = ""; document.getElementById('newModelInc').value = ""; 
+        refreshAll();
+    }
+
     function deleteCat(cat) { 
         if(!isEditMode) return; 
         hb(); 
-        if(confirm(`確定刪除此月份的類別「${cat}」？`)) { 
-            if (getMode() === 'incentive') {
-                const m = document.getElementById('adminMonth').value;
-                getTargetProds()[cat].forEach(item => { if(item.incs) delete item.incs[m]; });
+        if(confirm(`⚠️ 確定刪除類別「${cat}」？`)) { 
+            if(getMode()==='receipt') {
+                delete prods_rec[cat];
             } else {
-                delete getTargetProds()[cat];
+                const m = document.getElementById('adminMonth').value;
+                prods_inc[cat].forEach(item => { if(item.incs) delete item.incs[m]; });
             }
             refreshAll(); 
         } 
@@ -299,39 +322,16 @@
     function deleteModel(cat, name) { 
         if(!isEditMode) return; 
         hb(); 
-        if(confirm(`確定刪除此月份的型號「${name}」？`)) { 
-            if (getMode() === 'incentive') {
-                const m = document.getElementById('adminMonth').value;
-                let item = getTargetProds()[cat].find(x => x.name === name);
-                if (item && item.incs) delete item.incs[m];
+        if(confirm(`確定刪除「${name}」？`)) { 
+            if(getMode()==='receipt') {
+                prods_rec[cat] = prods_rec[cat].filter(x=>x.name!==name);
             } else {
-                getTargetProds()[cat] = getTargetProds()[cat].filter(x=>x.name!==name);
+                const m = document.getElementById('adminMonth').value;
+                let item = prods_inc[cat].find(x=>x.name===name);
+                if(item && item.incs) delete item.incs[m];
             }
             refreshAll(); 
         } 
-    }
-
-    function addCategory() { 
-        const n = document.getElementById('newCatName').value.trim(); 
-        if(n) { 
-            if (!getTargetProds()[n]) getTargetProds()[n] = []; 
-            document.getElementById('newCatName').value = ''; 
-            refreshAll(); 
-        } 
-    }
-
-    function addModel() {
-        const c = document.getElementById('targetCat').value, n = document.getElementById('newModelName').value.trim();
-        if(!c || !n) return alert("請填寫類別及型號");
-        let p = getTargetProds(); 
-        if(!p[c]) p[c] = [];
-        let item = p[c].find(x=>x.name===n);
-        if(getMode()==='incentive'){
-            const inc = document.getElementById('newModelInc').value || '0', m = document.getElementById('adminMonth').value;
-            if(item){ if(!item.incs)item.incs={}; item.incs[m]=inc; } else { p[c].push({name:n, incs:{[m]:inc}}); }
-        } else { if(!item) p[c].push({name:n}); }
-        document.getElementById('newModelName').value = ""; document.getElementById('newModelInc').value = ""; 
-        refreshAll();
     }
 
     function renderSalesList() {
@@ -343,15 +343,12 @@
                     <div style="display:flex; justify-content:space-between; align-items:center;"><div><b>${s.model} (x${s.qty})</b>${receiptTag}</div><span style="color:var(--danger); font-weight:bold;">$${s.price}</span></div></div></div>`;
         }).join('');
     }
-
     function deleteSale(id) { hb(); if(confirm("確定刪除此筆紀錄？")) { sales = sales.filter(s => s.id !== id); refreshAll(); } }
-    
     function updateDateMarks() {
         const currentMonth = document.getElementById('saleDate').value.substring(0, 7);
         const recordedDays = [...new Set(sales.filter(s => s.date.startsWith(currentMonth)).map(s => parseInt(s.date.split('-')[2])))].sort((a, b) => a - b);
         document.getElementById('dateMarkArea').innerHTML = recordedDays.map(day => `<div class="mark-dot">${day}</div>`).join('');
     }
-
     function showSummary(type) {
         const d = document.getElementById('saleDate').value, month = d.substring(0,7);
         const filtered = type==='day' ? sales.filter(s=>s.date===d) : sales.filter(s=>s.date.startsWith(month));
@@ -367,7 +364,6 @@
         document.getElementById('totalIncArea').innerText = totalInc > 0 ? `總獎金: $${totalInc}` : "";
         document.getElementById('summaryOverlay').style.display = 'flex';
     }
-
     function closeSummary() { document.getElementById('summaryOverlay').style.display = 'none'; }
     function toggleAdmin() { hb(); document.getElementById('mainUI').classList.toggle('hidden'); document.getElementById('adminSection').classList.toggle('hidden'); refreshAll(); }
     function setActiveInput(t) { if (getMode() === 'incentive' && t === 'extra') return; hb(); activeInput = t; document.querySelectorAll('.display-box').forEach(e => e.classList.remove('active')); document.getElementById('display'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active'); }
