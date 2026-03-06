@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日銷售記錄系統 V33</title>
+    <title>每日銷售記錄系統 V34</title>
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -62,7 +62,7 @@
 
 <div id="mainUI">
     <div class="header-area">
-        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">Version V33</span></h2>
+        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">Version V34</span></h2>
         <div class="disclaimer">此系統為實驗性質，如數據有所遺失開發者並不負責</div>
         <div class="admin-trigger" onclick="hb(); toggleAdmin()">⚙️</div>
     </div>
@@ -107,10 +107,10 @@
         <div id="adminMonthArea"><label>管理月份</label><input type="month" id="adminMonth" onchange="refreshAll();"></div>
         <hr>
         <label>1. 新增類別</label>
-        <input type="text" id="newCatName" placeholder="輸入類別後按新增">
+        <input type="text" id="newCatName" placeholder="輸入後按下方按鈕">
         <button class="btn-save" style="height:45px; margin-bottom:15px; font-size:16px;" onclick="addCategory()">確定新增類別</button>
         
-        <label>2. 設定型號 (必須先選類別)</label>
+        <label>2. 設定型號</label>
         <select id="targetCat"></select>
         <input type="text" id="newModelName" placeholder="型號名稱">
         <div id="adminIncWrapper" class="hidden"><input type="number" id="newModelInc" placeholder="獎金 ($)"></div>
@@ -134,6 +134,7 @@
     
     let activeInput = 'price', inputValues = { qty: '1', extra: '', price: '0' };
     let isEditMode = false;
+    let lastAddedCat = null; // 追蹤剛新增但仲未有型號嘅類別
 
     const today = new Date();
     document.getElementById('saleDate').valueAsDate = today;
@@ -164,27 +165,34 @@
     function refreshAll() {
         updateMode();
         let p = getTargetProds();
-        const currentMonth = (getMode() === 'receipt') ? null : document.getElementById('saleDate').value.substring(0, 7);
-        const adminMonth = document.getElementById('adminMonth').value;
         const mode = getMode();
+        const currentMonth = (mode === 'receipt') ? null : document.getElementById('saleDate').value.substring(0, 7);
+        const adminMonth = document.getElementById('adminMonth').value;
         
-        // 前台選單過濾 (嚴格掛鉤)
-        let displayCats = Object.keys(p);
-        if (mode === 'incentive') {
-            displayCats = displayCats.filter(cat => p[cat].some(m => m.incs && m.incs[currentMonth] !== undefined));
-        }
+        // --- 前台選單過濾 (嚴格月份掛鉤) ---
+        let frontendCats = Object.keys(p).filter(cat => {
+            if (mode === 'receipt') return true;
+            return p[cat].some(m => m.incs && m.incs[currentMonth] !== undefined);
+        });
         
         const saleCatEl = document.getElementById('saleCat');
         const lastSaleCat = saleCatEl.value;
-        saleCatEl.innerHTML = '<option value="">-- 請先選擇類別 --</option>' + displayCats.map(c => `<option value="${c}">${c}</option>`).join('');
-        if(lastSaleCat && displayCats.includes(lastSaleCat)) saleCatEl.value = lastSaleCat;
+        saleCatEl.innerHTML = '<option value="">-- 請先選擇類別 --</option>' + frontendCats.map(c => `<option value="${c}">${c}</option>`).join('');
+        if(lastSaleCat && frontendCats.includes(lastSaleCat)) saleCatEl.value = lastSaleCat;
 
-        // 後台選單 (始終顯示所有類別方便新增)
+        // --- 後台選單過濾 ---
+        let backendCats = Object.keys(p).filter(cat => {
+            if (mode === 'receipt') return true;
+            // 顯示規則：有該月數據，或者是剛剛新增的暫存類別
+            const hasData = p[cat].some(m => m.incs && m.incs[adminMonth] !== undefined);
+            return hasData || cat === lastAddedCat;
+        });
+
         const targetCatSelect = document.getElementById('targetCat');
         const lastTargetCat = targetCatSelect.value;
-        const allCats = Object.keys(p);
-        targetCatSelect.innerHTML = '<option value="">-- 選擇類別 --</option>' + allCats.map(c => `<option value="${c}">${c}</option>`).join('');
-        if(lastTargetCat && allCats.includes(lastTargetCat)) targetCatSelect.value = lastTargetCat;
+        targetCatSelect.innerHTML = '<option value="">-- 選擇類別 --</option>' + backendCats.map(c => `<option value="${c}">${c}</option>`).join('');
+        if(lastTargetCat && backendCats.includes(lastTargetCat)) targetCatSelect.value = lastTargetCat;
+        else if (lastAddedCat) targetCatSelect.value = lastAddedCat;
 
         renderSalesList(); 
         renderAdminConfigList(); 
@@ -236,7 +244,6 @@
             if (mode === 'incentive') {
                 models = models.filter(item => item.incs && item.incs[m] !== undefined);
             }
-            // Incentive 模式下，如果該月冇資料就成個類別唔出
             if (mode === 'incentive' && models.length === 0) continue; 
 
             h += `<div class="admin-list-item">
@@ -258,7 +265,7 @@
             });
             h += `</div></div>`;
         }
-        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px; color:#999;">本月尚未輸入任何產品</p>';
+        document.getElementById('adminConfigList').innerHTML = h || '<p style="text-align:center; padding:20px; color:#999;">本月無資料，請先新增類別。</p>';
         if(isEditMode) initSortable();
     }
 
@@ -288,8 +295,9 @@
         if(n) { 
             let p = getTargetProds();
             if(!p[n]) p[n] = []; 
+            lastAddedCat = n; // 標記為剛新增
             document.getElementById('newCatName').value = ''; 
-            refreshAll(); // 確保 targetCat dropdown 即時更新
+            refreshAll(); 
         } 
     }
 
@@ -301,6 +309,7 @@
             const inc = document.getElementById('newModelInc').value || '0', m = document.getElementById('adminMonth').value;
             if(item){ if(!item.incs)item.incs={}; item.incs[m]=inc; } else { p[c].push({name:n, incs:{[m]:inc}}); }
         } else { if(!item) p[c].push({name:n}); }
+        lastAddedCat = null; // 成功加入型號後，暫存標記失效
         document.getElementById('newModelName').value = ""; document.getElementById('newModelInc').value = ""; 
         refreshAll();
     }
@@ -313,7 +322,10 @@
                 delete prods_rec[cat];
             } else {
                 const m = document.getElementById('adminMonth').value;
-                prods_inc[cat].forEach(item => { if(item.incs) delete item.incs[m]; });
+                // 喺 Incentive 模式，刪除類別係指刪除該月嘅所有型號獎金
+                if (prods_inc[cat]) {
+                    prods_inc[cat].forEach(item => { if(item.incs) delete item.incs[m]; });
+                }
             }
             refreshAll(); 
         } 
