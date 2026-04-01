@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日銷售記錄系統 V35.1</title>
+    <title>每日銷售記錄系統 V35.2</title>
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -72,7 +72,7 @@
 
 <div id="mainUI">
     <div class="header-area">
-        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">Version V35.1</span></h2>
+        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">Version V35.2</span></h2>
         <div class="disclaimer">此系統為實驗性質，如數據有所遺失開發者並不負責</div>
         <div class="admin-trigger" onclick="hb(); toggleAdmin()">⚙️</div>
     </div>
@@ -166,6 +166,10 @@
     const pad = n => String(n).padStart(2, '0');
     let selectedDate = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
 
+    // --- 新增內部格式化工具，用於解決 JS 浮點數計算 bug ---
+    // 這只會影響顯示，不影響你 localStorage 存儲的原始數據
+    const fmt = num => Number(Math.round(num + 'e2') + 'e-2');
+
     // Web Audio API 短促按鍵聲
     let audioCtx;
     function playClickSound() {
@@ -177,19 +181,18 @@
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime); // 頻率（音高）
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime); 
             osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); // 音量
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); 
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.05); // 聲音長度：0.05秒
+            osc.stop(audioCtx.currentTime + 0.05); 
         } catch(e) {}
     }
 
-    // 將聲音加入原本的震動回饋函數
     function hb() { 
         if (window.navigator.vibrate) window.navigator.vibrate(60); 
-        playClickSound(); // 觸發聲音
+        playClickSound(); 
     }
 
     function getTargetProds() { return prods_rec; }
@@ -345,8 +348,9 @@
         const filtered = sales.filter(s => s.date === selectedDate);
         document.getElementById('recordList').innerHTML = filtered.map(s => {
             const receiptTag = (s.extra && s.extra !== '0') ? `<span class="receipt-tag">🎫 收據: ${s.extra}</span>` : '';
+            // 修正顯示：加入 fmt() 處理單筆顯示
             return `<div class="swipe-container"><div class="action-btn action-del" onclick="deleteSale(${s.id})">刪除</div><div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)">
-                    <div style="display:flex; justify-content:space-between; align-items:center;"><div><b>${s.model} (x${s.qty})</b>${receiptTag}</div><span style="color:var(--danger); font-weight:bold;">$${s.price}</span></div></div></div>`;
+                    <div style="display:flex; justify-content:space-between; align-items:center;"><div><b>${s.model} (x${s.qty})</b>${receiptTag}</div><span style="color:var(--danger); font-weight:bold;">$${fmt(s.price)}</span></div></div></div>`;
         }).join('');
     }
     
@@ -357,11 +361,18 @@
         const filtered = type==='day' ? sales.filter(s=>s.date===selectedDate) : sales.filter(s=>s.date.startsWith(monthPrefix));
         
         let sum = {}, totalSales = 0;
-        filtered.forEach(s => { if(!sum[s.model]) sum[s.model] = { q:0, p:0 }; sum[s.model].q += s.qty; sum[s.model].p += s.price; totalSales += s.price; });
+        filtered.forEach(s => { 
+            if(!sum[s.model]) sum[s.model] = { q:0, p:0 }; 
+            sum[s.model].q += s.qty; 
+            sum[s.model].p += s.price; 
+            totalSales += s.price; 
+        });
         
         document.getElementById('modalTitle').innerText = type==='day' ? `📋 ${selectedDate} 總結` : `📅 ${monthPrefix} 總結`;
-        document.getElementById('summaryTableBody').innerHTML = Object.keys(sum).map(m => `<tr><td>${m}</td><td align="center">${sum[m].q}</td><td align="right">$${sum[m].p}</td></tr>`).join('') || '<tr><td colspan="3" align="center">無數據</td></tr>';
-        document.getElementById('totalSalesArea').innerText = `總金額: $${totalSales}`;
+        
+        // 修正顯示：使用 fmt() 處理每一項累加結果和最後總計
+        document.getElementById('summaryTableBody').innerHTML = Object.keys(sum).map(m => `<tr><td>${m}</td><td align="center">${sum[m].q}</td><td align="right">$${fmt(sum[m].p)}</td></tr>`).join('') || '<tr><td colspan="3" align="center">無數據</td></tr>';
+        document.getElementById('totalSalesArea').innerText = `總金額: $${fmt(totalSales)}`;
         document.getElementById('summaryOverlay').style.display = 'flex';
     }
 
@@ -376,7 +387,6 @@
     
     function setActiveInput(t) { hb(); activeInput = t; document.querySelectorAll('.display-box').forEach(e => e.classList.remove('active')); document.getElementById('display'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active'); }
     
-    // 加入了 hb() 確保每次撳 Keypad 數字都會有聲
     function pressKey(k) { hb(); let v = inputValues[activeInput]; if(k==='DEL'){ inputValues[activeInput] = v.length>1?v.slice(0,-1):(activeInput==='extra'?'':'0'); } else { if(activeInput!=='extra'&&v==='0'&&k!=='.')v=''; if(k==='.'&&v.includes('.'))return; inputValues[activeInput]=v+k; } updateDisplays(); }
     function updateDisplays() { document.getElementById('displayQty').innerText = inputValues.qty; document.getElementById('displayExtra').innerText = inputValues.extra || ''; document.getElementById('displayPrice').innerText = inputValues.price; }
 
