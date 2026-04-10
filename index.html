@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>每日銷售記錄系統 V35.2</title>
+    <title>每日銷售記錄系統 V35.3</title>
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -66,13 +66,21 @@
 
         .btn-back { width: 100%; height: 50px; background: #6c757d; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 8px;}
         .input-header-title { text-align: center; color: var(--primary); font-size: 18px; font-weight: 900; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px dashed #ccc;}
+
+        /* 專門為收據編號重複警告設計的樣式 */
+        .confirm-title { color: var(--danger); font-size: 20px; font-weight: 900; text-align: center; margin-bottom: 15px; }
+        .confirm-msg { font-size: 16px; color: #333; line-height: 1.5; margin-bottom: 25px; text-align: center; }
+        .confirm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .btn-confirm { height: 60px; border-radius: 12px; font-size: 18px; font-weight: 900; border: none; color: white; }
+        .btn-confirm.yes { background: var(--success); }
+        .btn-confirm.no { background: #6c757d; }
     </style>
 </head>
 <body>
 
 <div id="mainUI">
     <div class="header-area">
-        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">Version V35.2</span></h2>
+        <h2>銷售記錄系統 <span style="font-size:12px; color:#888;">Version V35.3</span></h2>
         <div class="disclaimer">此系統為實驗性質，如數據有所遺失開發者並不負責</div>
         <div class="admin-trigger" onclick="hb(); toggleAdmin()">⚙️</div>
     </div>
@@ -147,7 +155,20 @@
     </div>
 </div>
 
+<!-- 總結彈窗 -->
 <div id="summaryOverlay" class="overlay"><div class="modal-card"><h3 id="modalTitle" style="text-align:center;"></h3><table class="summary-table"><tbody id="summaryTableBody"></tbody></table><div id="summaryFooter" style="margin-top:15px; text-align:right; border-top:2px solid #eee; padding-top:10px;"><div id="totalSalesArea" style="font-weight:bold;"></div></div><button onclick="closeSummary()" style="width:100%; height:50px; background:#444; color:white; border:none; border-radius:10px; margin-top:15px;">關閉</button></div></div>
+
+<!-- 收據編號重複警告彈窗 (V35.3 新增) -->
+<div id="confirmOverlay" class="overlay">
+    <div class="modal-card">
+        <div class="confirm-title">⚠️ 收據編號重複警告</div>
+        <div class="confirm-msg" id="confirmMsg"></div>
+        <div class="confirm-btns">
+            <button class="btn-confirm yes" onclick="executeSave(true)">確實儲存</button>
+            <button class="btn-confirm no" onclick="closeConfirm()">取消輸入</button>
+        </div>
+    </div>
+</div>
 
 <script>
     let prods_rec = JSON.parse(localStorage.getItem('prods_rec')) || {};
@@ -166,8 +187,6 @@
     const pad = n => String(n).padStart(2, '0');
     let selectedDate = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
 
-    // --- 新增內部格式化工具，用於解決 JS 浮點數計算 bug ---
-    // 這只會影響顯示，不影響你 localStorage 存儲的原始數據
     const fmt = num => Number(Math.round(num + 'e2') + 'e-2');
 
     // Web Audio API 短促按鍵聲
@@ -283,26 +302,62 @@
 
     function onModelSelectChange() {}
 
+    // V35.3 更新：分開初步檢查與實際執行儲存的邏輯
     function saveRecord() {
         const cat = document.getElementById('saleCat').value;
         const model = document.getElementById('saleModel').value;
         const receiptNo = inputValues.extra.trim();
 
-        if (!cat || !model) return alert("⚠️ 請選取類別及型號！");
+        if (!cat || !model) {
+            // 對於缺少資料的關鍵錯誤，維持簡單警告
+            return document.getElementById('inputDateDisplay').innerText = "⚠️ 請填寫類別和型號！"; 
+        }
 
+        // 偵測重複收據
         if (receiptNo !== "" && receiptNo !== "0") {
             const isDuplicate = sales.some(s => s.date === selectedDate && s.extra === receiptNo);
             if (isDuplicate) {
-                return alert(`⚠️ 警告：收據編號 [${receiptNo}] 於今天已有記錄，請檢查是否重複輸入。`);
+                document.getElementById('confirmMsg').innerText = `收據編號 [${receiptNo}] 於今日已有記錄。是否仍要重複存檔？`;
+                document.getElementById('confirmOverlay').style.display = 'flex';
+                return;
             }
         }
 
-        sales.unshift({ id: Date.now(), date: selectedDate, cat: cat, model: model, qty: parseInt(inputValues.qty), extra: receiptNo || '0', price: parseFloat(inputValues.price), modeAtTime: 'receipt' });
+        executeSave(false);
+    }
 
+    // 實際執行存檔邏輯
+    function executeSave(fromConfirm) {
+        if (fromConfirm) hb(); 
+        
+        const cat = document.getElementById('saleCat').value;
+        const model = document.getElementById('saleModel').value;
+        const receiptNo = inputValues.extra.trim();
+
+        sales.unshift({ 
+            id: Date.now(), 
+            date: selectedDate, 
+            cat: cat, 
+            model: model, 
+            qty: parseInt(inputValues.qty), 
+            extra: receiptNo || '0', 
+            price: parseFloat(inputValues.price), 
+            modeAtTime: 'receipt' 
+        });
+
+        // 恢復 UI
         document.getElementById('saleCat').value = ""; 
         document.getElementById('saleModel').innerHTML = '<option value="">-- 型號 --</option>';
         inputValues = { qty: '1', extra: '', price: '0' };
-        updateDisplays(); refreshAll(); 
+        
+        if (fromConfirm) closeConfirm();
+        
+        updateDisplays(); 
+        refreshAll(); 
+    }
+
+    function closeConfirm() { 
+        document.getElementById('confirmOverlay').style.display = 'none'; 
     }
 
     function renderAdminConfigList() {
@@ -348,7 +403,6 @@
         const filtered = sales.filter(s => s.date === selectedDate);
         document.getElementById('recordList').innerHTML = filtered.map(s => {
             const receiptTag = (s.extra && s.extra !== '0') ? `<span class="receipt-tag">🎫 收據: ${s.extra}</span>` : '';
-            // 修正顯示：加入 fmt() 處理單筆顯示
             return `<div class="swipe-container"><div class="action-btn action-del" onclick="deleteSale(${s.id})">刪除</div><div class="swipe-content" ontouchstart="hTS(event)" ontouchmove="hTM(event)" ontouchend="hTE(event)">
                     <div style="display:flex; justify-content:space-between; align-items:center;"><div><b>${s.model} (x${s.qty})</b>${receiptTag}</div><span style="color:var(--danger); font-weight:bold;">$${fmt(s.price)}</span></div></div></div>`;
         }).join('');
@@ -369,8 +423,6 @@
         });
         
         document.getElementById('modalTitle').innerText = type==='day' ? `📋 ${selectedDate} 總結` : `📅 ${monthPrefix} 總結`;
-        
-        // 修正顯示：使用 fmt() 處理每一項累加結果和最後總計
         document.getElementById('summaryTableBody').innerHTML = Object.keys(sum).map(m => `<tr><td>${m}</td><td align="center">${sum[m].q}</td><td align="right">$${fmt(sum[m].p)}</td></tr>`).join('') || '<tr><td colspan="3" align="center">無數據</td></tr>';
         document.getElementById('totalSalesArea').innerText = `總金額: $${fmt(totalSales)}`;
         document.getElementById('summaryOverlay').style.display = 'flex';
